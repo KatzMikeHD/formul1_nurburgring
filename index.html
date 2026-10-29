@@ -1,0 +1,1842 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Grüne Hölle Drift</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --gruen:#b8ff3c;
+  --rot:#ff4a3d;
+  --text:#f4f6f0;
+  --gedimmt:rgba(244,246,240,.62);
+  --panel:rgba(10,14,12,.58);
+  --rand:rgba(255,255,255,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html,body{height:100%;overflow:hidden;background:#0b0f0c;color:var(--text);font-family:"Rajdhani",system-ui,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+#welt{position:fixed;inset:0;touch-action:none}
+#welt canvas{display:block;width:100%;height:100%}
+button{font-family:inherit}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;inset:0;pointer-events:none}
+.panel{background:var(--panel);border:1px solid var(--rand);border-radius:12px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#links{position:absolute;top:max(14px,env(safe-area-inset-top));left:max(16px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+#runde{padding:10px 14px;min-width:168px}
+.zeile{display:flex;justify-content:space-between;gap:14px;font-size:14px;font-weight:600;letter-spacing:.06em;color:var(--gedimmt);text-transform:uppercase}
+.zeile b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+#zeitGross{font-family:"Russo One",sans-serif;font-size:26px;letter-spacing:.02em;font-variant-numeric:tabular-nums;margin:2px 0 4px}
+#abstand{padding:7px 14px;min-width:168px;display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:13px;font-weight:700;letter-spacing:.12em;color:var(--gedimmt)}
+#abstand b{font-family:"Russo One",sans-serif;font-weight:400;font-size:19px;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+#abstand b.vorn{color:var(--gruen)} #abstand b.hinten{color:var(--rot)}
+#zuschauerInfo{padding:7px 14px;font-size:13px;font-weight:700;letter-spacing:.14em;color:var(--gruen)}
+#knoepfeOben{position:absolute;top:max(14px,env(safe-area-inset-top));left:calc(max(16px,env(safe-area-inset-left)) + 196px);display:flex;gap:8px}
+.mini{height:40px;min-width:40px;padding:0 12px;border-radius:10px;pointer-events:auto;color:var(--text);font:700 14px "Rajdhani",sans-serif;letter-spacing:.08em;cursor:pointer}
+#karte{position:absolute;top:max(14px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));width:170px;height:170px;padding:6px}
+#karte canvas{width:100%;height:100%;display:block}
+#mitteOben{position:absolute;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;width:min(340px,40vw)}
+#gesamt{font-size:15px;font-weight:700;letter-spacing:.14em;color:var(--gedimmt);white-space:nowrap}
+#gesamt b{color:var(--text);font-family:"Russo One",sans-serif;font-weight:400;letter-spacing:.04em;margin-left:6px}
+#drift{display:flex;flex-direction:column;align-items:center;transition:opacity .25s, transform .25s;opacity:0;transform:scale(.9)}
+#drift.an{opacity:1;transform:scale(1)}
+#driftTitel{font-family:"Russo One",sans-serif;font-size:13px;letter-spacing:.35em;color:var(--gruen)}
+#driftWert{font-family:"Russo One",sans-serif;font-size:44px;line-height:1;text-shadow:0 2px 18px rgba(184,255,60,.35);font-variant-numeric:tabular-nums}
+#driftInfo{display:flex;gap:10px;align-items:center;margin-top:4px}
+#driftMult{font-family:"Russo One",sans-serif;font-size:20px;color:var(--gruen)}
+#driftWinkel{font-size:15px;font-weight:700;color:var(--gedimmt)}
+#driftBalken{width:120px;height:5px;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden}
+#driftBalken i{display:block;height:100%;width:0;background:var(--gruen)}
+#abschnitt{position:absolute;top:max(31%,150px);left:50%;transform:translateX(-50%);font-family:"Russo One",sans-serif;font-size:22px;letter-spacing:.08em;padding:8px 18px;border-radius:999px;opacity:0;transition:opacity .4s;white-space:nowrap}
+#abschnitt.an{opacity:1}
+#meldung{position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);font-family:"Russo One",sans-serif;font-size:clamp(26px,5vw,46px);text-align:center;white-space:nowrap;opacity:0;pointer-events:none;text-shadow:0 3px 22px rgba(0,0,0,.55)}
+#meldung small{display:block;font-size:.42em;letter-spacing:.3em;margin-top:6px;color:var(--gedimmt)}
+#meldung.pop{animation:pop 1.6s ease-out forwards}
+#meldung.gut{color:var(--gruen)}
+#meldung.schlecht{color:var(--rot)}
+@keyframes pop{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}22%{transform:translate(-50%,-50%) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-70%) scale(1)}}
+#falsch{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-family:"Russo One",sans-serif;font-size:24px;color:#fff;background:var(--rot);padding:8px 18px;border-radius:8px;letter-spacing:.06em}
+#ampel{position:absolute;top:max(18%,120px);left:50%;transform:translateX(-50%);display:flex;gap:10px;padding:12px 14px;border-radius:14px;background:rgba(8,10,9,.82)}
+#ampel .spalte{display:flex;flex-direction:column;gap:8px;padding:6px;border-radius:8px;background:#151816}
+#ampel i{display:block;width:30px;height:30px;border-radius:50%;background:#3a0b08;box-shadow:inset 0 -4px 8px rgba(0,0,0,.5)}
+#ampel .spalte.an i{background:radial-gradient(circle at 40% 35%,#ffb3a8,#ff2a14 45%,#a50d00);box-shadow:0 0 18px rgba(255,40,20,.85)}
+#kamName{position:absolute;bottom:calc(max(14px,env(safe-area-inset-bottom)) + 76px);left:50%;transform:translateX(-50%);font-size:13px;font-weight:700;letter-spacing:.2em;color:var(--gedimmt);opacity:0;transition:opacity .4s}
+#kamName.an{opacity:1}
+#tacho{position:absolute;bottom:max(14px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;align-items:flex-end;gap:12px;padding:8px 16px 10px}
+#kmh{font-family:"Russo One",sans-serif;font-size:42px;line-height:1;font-variant-numeric:tabular-nums;min-width:86px;text-align:right}
+.einheit{font-size:13px;font-weight:700;letter-spacing:.14em;color:var(--gedimmt);margin-bottom:4px}
+#gangBox{display:flex;flex-direction:column;align-items:center;gap:4px;margin-bottom:2px}
+#gang{font-family:"Russo One",sans-serif;font-size:24px;line-height:1;color:var(--gruen);width:30px;text-align:center}
+#drehzahl{width:64px;height:5px;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden}
+#drehzahl i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gruen) 70%,var(--rot))}
+#hilfe{position:absolute;bottom:max(14px,env(safe-area-inset-bottom));left:max(16px,env(safe-area-inset-left));font-size:13px;font-weight:600;color:var(--gedimmt);line-height:1.5;padding:8px 12px}
+#hilfe kbd{font-family:inherit;color:var(--text);border:1px solid var(--rand);border-radius:4px;padding:0 5px;font-size:12px}
+
+/* ---------- Touch ---------- */
+#touch{position:fixed;inset:0;pointer-events:none}
+.tk{position:absolute;pointer-events:auto;touch-action:none;border-radius:50%;display:grid;place-items:center;font-family:"Russo One",sans-serif;color:var(--text);background:rgba(12,16,13,.45);border:2px solid rgba(255,255,255,.22);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);font-size:15px;letter-spacing:.06em}
+.tk.an{background:rgba(184,255,60,.32);border-color:var(--gruen)}
+.tk svg{width:34px;height:34px;fill:currentColor}
+#tLinks{left:max(18px,env(safe-area-inset-left));bottom:max(22px,env(safe-area-inset-bottom));width:92px;height:92px}
+#tRechts{left:calc(max(18px,env(safe-area-inset-left)) + 106px);bottom:max(22px,env(safe-area-inset-bottom));width:92px;height:92px}
+#tGas{right:max(18px,env(safe-area-inset-right));bottom:max(22px,env(safe-area-inset-bottom));width:104px;height:104px;font-size:17px}
+#tBremse{right:calc(max(18px,env(safe-area-inset-right)) + 118px);bottom:max(22px,env(safe-area-inset-bottom));width:78px;height:78px;font-size:12px}
+#tHand{right:calc(max(18px,env(safe-area-inset-right)) + 14px);bottom:calc(max(22px,env(safe-area-inset-bottom)) + 118px);width:78px;height:78px;font-size:12px;border-color:rgba(184,255,60,.5)}
+#tReset{right:calc(max(18px,env(safe-area-inset-right)) + 124px);bottom:calc(max(22px,env(safe-area-inset-bottom)) + 96px);width:52px;height:52px;font-size:11px}
+body.touch #hilfe{display:none}
+
+/* ---------- Menüs ---------- */
+.menue{position:fixed;inset:0;display:grid;place-items:center;padding:24px 16px;background:radial-gradient(ellipse at 50% 35%,rgba(10,30,14,.35),rgba(4,8,5,.82));overflow:auto}
+.karte{width:min(560px,100%);text-align:center;padding:26px 24px 22px;background:rgba(8,12,9,.6);border:1px solid var(--rand);border-radius:18px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.ueber{font-family:"Russo One",sans-serif;font-size:clamp(38px,8vw,62px);line-height:.95;letter-spacing:.02em;background:linear-gradient(180deg,#e9ffc4,var(--gruen) 55%,#5f9a12);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 24px rgba(184,255,60,.25))}
+.unter{font-family:"Russo One",sans-serif;letter-spacing:.6em;font-size:clamp(15px,3.2vw,20px);margin:6px 0 16px;padding-left:.6em}
+.text{color:var(--gedimmt);font-size:15px;font-weight:600;line-height:1.45}
+.abschnittTitel{font-size:12px;font-weight:700;letter-spacing:.2em;color:var(--gedimmt);margin:16px 0 8px}
+.wahl{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.wahlKnopf{flex:1 1 0;min-width:112px;padding:10px 10px 9px;border-radius:12px;border:1px solid var(--rand);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;text-align:center;transition:border-color .15s, background .15s}
+.wahlKnopf.klein{min-width:54px;flex:0 0 auto;padding:8px 16px}
+.wahlKnopf b{display:block;font-family:"Russo One",sans-serif;font-weight:400;font-size:15px;letter-spacing:.04em}
+.wahlKnopf span{display:block;font-size:13px;font-weight:600;color:var(--gedimmt);margin-top:2px;line-height:1.25}
+.wahlKnopf.an{border-color:var(--gruen);background:rgba(184,255,60,.12)}
+.wahlKnopf.an b{color:var(--gruen)}
+.farben{display:flex;justify-content:center;gap:12px;margin-top:12px}
+.farbe{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer;box-shadow:inset 0 -6px 10px rgba(0,0,0,.3)}
+.farbe.an{border-color:#fff}
+.knopf{font-family:"Russo One",sans-serif;font-size:20px;letter-spacing:.08em;color:#0b1206;background:var(--gruen);border:none;border-radius:12px;padding:15px 34px;cursor:pointer;box-shadow:0 6px 30px rgba(184,255,60,.3);transition:transform .15s;margin-top:20px}
+.knopf:hover{transform:translateY(-2px)}
+.knopf:disabled{opacity:.5;cursor:wait;transform:none}
+.knopf.zweit{background:transparent;color:var(--text);border:1px solid var(--rand);box-shadow:none;font-size:15px;padding:11px 22px}
+.knoepfe{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.rekorde{display:flex;justify-content:center;gap:18px;margin:18px 0 4px;flex-wrap:wrap}
+.rekord{display:flex;flex-direction:column;font-size:12px;font-weight:700;letter-spacing:.16em;color:var(--gedimmt)}
+.rekord b{font-family:"Russo One",sans-serif;font-weight:400;font-size:18px;color:var(--text);letter-spacing:.02em;margin-top:2px}
+.rekord.ki b{color:var(--gruen)}
+.steuer{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;text-align:left;font-size:14px;font-weight:600;color:var(--gedimmt);margin:16px auto 0;width:max-content;max-width:100%}
+.steuer kbd{font-family:inherit;color:var(--text);border:1px solid var(--rand);border-radius:5px;padding:0 6px;font-size:13px;white-space:nowrap}
+.tonKnopf{margin-top:12px;background:none;border:none;color:var(--gedimmt);font:700 13px "Rajdhani",sans-serif;letter-spacing:.16em;cursor:pointer}
+#laden{position:fixed;inset:0;display:grid;place-items:center;background:#0b0f0c;font-family:"Russo One",sans-serif;letter-spacing:.2em;color:var(--gruen);font-size:15px}
+@media (max-width:900px){ #hilfe{display:none} }
+@media (max-width:640px){
+  #karte{width:118px;height:118px}
+  #runde,#abstand{min-width:138px;padding:8px 10px}
+  #zeitGross{font-size:20px}
+  .zeile{font-size:12px}
+  #knoepfeOben{left:calc(max(16px,env(safe-area-inset-left)) + 152px)}
+  #driftWert{font-size:34px}
+  #abschnitt{font-size:17px}
+  .tk{transform:scale(.86)}
+}
+</style>
+</head>
+<body>
+<div id="welt"></div>
+
+<div id="hud" hidden>
+  <div id="links">
+    <div id="runde" class="panel">
+      <div class="zeile"><span id="rundeTitel">Runde</span><b id="rundeNr">–</b></div>
+      <div id="zeitGross">0:00.0</div>
+      <div class="zeile"><span>Letzte</span><b id="letzte">–</b></div>
+      <div class="zeile"><span>Beste</span><b id="beste">–</b></div>
+      <div class="zeile"><span>Max</span><b id="maxV">0 km/h</b></div>
+    </div>
+    <div id="abstand" class="panel" hidden>VORLAGE<b id="abstandWert">±0.0</b></div>
+    <div id="zuschauerInfo" class="panel" hidden>VORLAGE FÄHRT</div>
+  </div>
+  <div id="knoepfeOben">
+    <button id="pauseKnopf" class="panel mini" aria-label="Pause">II</button>
+    <button id="kamKnopf" class="panel mini">KAMERA</button>
+  </div>
+  <div id="karte" class="panel"><canvas id="karteC"></canvas></div>
+  <div id="mitteOben">
+    <div id="gesamt">PUNKTE<b id="gesamtWert">0</b></div>
+    <div id="drift">
+      <div id="driftTitel">DRIFT</div>
+      <div id="driftWert">0</div>
+      <div id="driftInfo"><span id="driftMult">×1</span><div id="driftBalken"><i></i></div><span id="driftWinkel">0°</span></div>
+    </div>
+  </div>
+  <div id="abschnitt" class="panel"></div>
+  <div id="meldung"></div>
+  <div id="falsch" hidden>FALSCHE RICHTUNG</div>
+  <div id="ampel" hidden><div class="spalte"><i></i><i></i></div><div class="spalte"><i></i><i></i></div><div class="spalte"><i></i><i></i></div><div class="spalte"><i></i><i></i></div><div class="spalte"><i></i><i></i></div></div>
+  <div id="kamName"></div>
+  <div id="tacho" class="panel">
+    <div id="kmh">0</div><div class="einheit">KM/H</div>
+    <div id="gangBox"><div id="gang">1</div><div id="drehzahl"><i></i></div></div>
+  </div>
+  <div id="hilfe" class="panel"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> fahren · <kbd>Leertaste</kbd> Handbremse<br><kbd>R</kbd> zurücksetzen · <kbd>C</kbd>/<kbd>F3</kbd> Kamera · <kbd>P</kbd> Pause</div>
+</div>
+
+<div id="touch" hidden>
+  <div class="tk" id="tLinks" data-t="links"><svg viewBox="0 0 24 24"><path d="M15.5 4 7 12l8.5 8z"/></svg></div>
+  <div class="tk" id="tRechts" data-t="rechts"><svg viewBox="0 0 24 24"><path d="M8.5 4 17 12l-8.5 8z"/></svg></div>
+  <div class="tk" id="tGas" data-t="gas">GAS</div>
+  <div class="tk" id="tBremse" data-t="bremse">BREMSE</div>
+  <div class="tk" id="tHand" data-t="hand">DRIFT</div>
+  <div class="tk" id="tReset" data-t="reset">R</div>
+</div>
+
+<div id="startMenue" class="menue" hidden>
+  <div class="karte">
+    <div class="ueber">GRÜNE HÖLLE</div>
+    <div class="unter">DRIFT</div>
+    <p class="text">Nordschleife + Südschleife im Originalmaßstab – rund 27 km Eifel. Quer fahren gibt Punkte, Leitplanke und Wiese kosten sie.</p>
+    <div class="abschnittTitel">MODUS</div>
+    <div class="wahl" id="modusWahl">
+      <button class="wahlKnopf" data-m="frei"><b>FREI FAHREN</b><span>Allein auf der Strecke</span></button>
+      <button class="wahlKnopf" data-m="rennen"><b>GEGEN DIE VORLAGE</b><span>Der Computer fährt als Geist mit</span></button>
+      <button class="wahlKnopf" data-m="selbst"><b>GEGEN DICH SELBST</b><span>Deine beste Runde fährt als Geist mit</span></button>
+      <button class="wahlKnopf" data-m="zuschauen"><b>ZUSCHAUEN</b><span>Die perfekte Runde ansehen</span></button>
+    </div>
+    <div class="abschnittTitel">RUNDEN</div>
+    <div class="wahl" id="rundenWahl">
+      <button class="wahlKnopf klein" data-r="1"><b>1</b></button>
+      <button class="wahlKnopf klein" data-r="2"><b>2</b></button>
+      <button class="wahlKnopf klein" data-r="3"><b>3</b></button>
+      <button class="wahlKnopf klein" data-r="5"><b>5</b></button>
+      <button class="wahlKnopf klein" data-r="0"><b>∞</b></button>
+    </div>
+    <div class="abschnittTitel">LACKIERUNG DEINES FORMEL-AUTOS</div>
+    <div class="farben" id="farben"></div>
+    <button class="knopf" id="startKnopf" disabled>VORLAGE WIRD BERECHNET …</button>
+    <div class="rekorde">
+      <div class="rekord">DEINE BESTE RUNDE<b id="rRunde">–</b></div>
+      <div class="rekord">BESTER DRIFT<b id="rDrift">–</b></div>
+      <div class="rekord ki">VORLAGE<b id="rKi">–</b></div>
+    </div>
+    <div class="steuer" id="steuerTasten">
+      <span><kbd>W</kbd> <kbd>S</kbd></span><span>Gas · Bremse / Rückwärts</span>
+      <span><kbd>A</kbd> <kbd>D</kbd></span><span>Lenken</span>
+      <span><kbd>Leertaste</kbd></span><span>Handbremse – Drift einleiten</span>
+      <span><kbd>C</kbd> / <kbd>F3</kbd></span><span>Kamera wechseln</span>
+      <span><kbd>R</kbd> <kbd>P</kbd></span><span>Zurücksetzen · Pause</span>
+    </div>
+    <p class="text" id="steuerTouch" hidden style="margin-top:14px">Links lenken, rechts Gas und Bremse. <b>DRIFT</b> ist die Handbremse: kurz antippen, einlenken, Gas halten.</p>
+    <button class="tonKnopf" id="tonKnopf">TON: AN</button>
+  </div>
+</div>
+
+<div id="pauseMenue" class="menue" hidden>
+  <div class="karte">
+    <div class="ueber" style="font-size:44px">PAUSE</div>
+    <div class="rekorde">
+      <div class="rekord">PUNKTE<b id="pPunkte">0</b></div>
+      <div class="rekord">BESTE RUNDE<b id="pRunde">–</b></div>
+      <div class="rekord">BESTER DRIFT<b id="pDrift">–</b></div>
+    </div>
+    <div class="knoepfe">
+      <button class="knopf" id="weiterKnopf">WEITER</button>
+      <button class="knopf zweit" id="neuKnopf" style="margin-top:20px">ZUM MENÜ</button>
+    </div>
+    <button class="tonKnopf" id="tonKnopf2">TON: AN</button>
+  </div>
+</div>
+
+<div id="zielMenue" class="menue" hidden>
+  <div class="karte">
+    <div class="ueber" style="font-size:44px">ZIEL</div>
+    <div class="unter" id="zielUnter" style="letter-spacing:.3em">GESCHAFFT</div>
+    <div class="rekorde">
+      <div class="rekord">GESAMTZEIT<b id="zZeit">–</b></div>
+      <div class="rekord">BESTE RUNDE<b id="zRunde">–</b></div>
+      <div class="rekord">HÖCHSTGESCHW.<b id="zMax">–</b></div>
+      <div class="rekord">PUNKTE<b id="zPunkte">0</b></div>
+    </div>
+    <p class="text" id="zVergleich" style="margin-top:8px"></p>
+    <div class="knoepfe">
+      <button class="knopf" id="nochmalKnopf">NOCHMAL</button>
+      <button class="knopf zweit" id="zielMenueKnopf" style="margin-top:20px">ZUM MENÜ</button>
+    </div>
+  </div>
+</div>
+
+<div id="laden">STRECKE WIRD GEBAUT …</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script>
+'use strict';
+(function(){
+const $ = id => document.getElementById(id);
+const ZEITFAKTOR = Number(new URLSearchParams(location.search).get('zeitfaktor')) || 1;
+
+// ================================================================
+//  Hilfsfunktionen
+// ================================================================
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const wrapW = d => { while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
+function h2(x, z) { const h = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return h - Math.floor(h); }
+function vnoise(x, z) {
+  const xi = Math.floor(x), zi = Math.floor(z), xf = x - xi, zf = z - zi;
+  const u = xf * xf * (3 - 2 * xf), v = zf * zf * (3 - 2 * zf);
+  const a = h2(xi, zi), b = h2(xi + 1, zi), c = h2(xi, zi + 1), d = h2(xi + 1, zi + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+function fbm(x, z, o = 5) { let s = 0, a = 1, f = 1, n = 0; for (let i = 0; i < o; i++) { s += a * vnoise(x * f, z * f); n += a; a *= .5; f *= 2.03; } return s / n; }
+let zufallZ = 12345;
+function zufall() { zufallZ = (zufallZ * 16807) % 2147483647; return (zufallZ - 1) / 2147483646; }
+
+// ================================================================
+//  Streckenverlauf (angelehnt an die Nordschleife)
+// ================================================================
+// Nordschleife + Südschleife (Gesamtstrecke 1927–1967), nachgezeichnet aus dem Streckenplan, Originalmaßstab
+const KP = [[-531.1, 1865.9, -0.4, "Start / Ziel"], [-543.8, 1878.6, -0.7], [-556.5, 1891.4, -0.9], [-569.3, 1904.1, -1.2], [-582.0, 1916.8, -1.5], [-594.7, 1929.6, -1.9], [-607.5, 1942.3, -2.2], [-620.2, 1955.0, -2.5], [-632.9, 1967.7, -2.9], [-645.7, 1980.5, -3.3], [-658.4, 1993.2, -3.6], [-671.1, 2005.9, -4.0], [-683.8, 2018.7, -4.3], [-696.5, 2031.4, -4.7], [-709.1, 2044.3, -5.0], [-721.3, 2057.5, -5.4], [-733.2, 2071.1, -5.8], [-744.9, 2084.8, -6.1], [-756.6, 2098.4, -6.5], [-768.3, 2112.1, -6.9], [-780.0, 2125.8, -7.2], [-791.6, 2139.5, -7.6], [-803.3, 2153.2, -7.9], [-815.0, 2166.9, -8.3], [-826.7, 2180.6, -8.7], [-838.4, 2194.3, -9.0], [-850.1, 2207.9, -9.4], [-861.8, 2221.6, -9.7], [-873.5, 2235.3, -10.1], [-884.9, 2249.3, -10.5], [-894.3, 2264.5, -10.8], [-898.2, 2282.0, -11.2], [-897.4, 2300.0, -11.5], [-895.4, 2317.8, -11.9], [-893.1, 2335.7, -12.3], [-890.9, 2353.6, -12.6], [-888.7, 2371.4, -13.0], [-886.3, 2389.3, -13.3], [-883.5, 2407.1, -13.7], [-879.6, 2424.6, -14.1], [-874.8, 2442.0, -14.4], [-869.7, 2459.2, -14.8], [-864.5, 2476.5, -15.1], [-859.4, 2493.7, -15.5], [-854.2, 2511.0, -15.9], [-849.0, 2528.2, -16.2], [-843.8, 2545.5, -16.6], [-838.7, 2562.7, -16.9], [-833.6, 2580.0, -17.3], [-829.0, 2597.4, -17.7], [-825.0, 2614.9, -18.0], [-821.4, 2632.6, -18.4], [-817.9, 2650.2, -18.8], [-814.4, 2667.9, -19.1], [-810.8, 2685.5, -19.5], [-807.4, 2703.2, -19.8], [-804.2, 2720.9, -20.2], [-801.6, 2738.7, -20.6], [-797.4, 2756.2, -20.9], [-790.1, 2772.6, -21.3], [-782.9, 2789.1, -21.7], [-777.9, 2806.4, -22.0], [-777.1, 2824.3, -22.4], [-781.1, 2841.8, -22.8], [-787.8, 2858.5, -23.3], [-796.8, 2874.1, -23.8], [-806.9, 2889.0, -24.3], [-817.8, 2903.3, -24.9], [-828.0, 2918.2, -25.7], [-836.6, 2934.0, -26.5, "Bränkekopf"], [-843.4, 2950.6, -27.4], [-848.0, 2968.0, -28.4], [-852.2, 2985.5, -29.5], [-855.2, 3003.3, -30.7], [-856.1, 3021.2, -32.0], [-856.8, 3039.2, -33.3], [-859.4, 3057.0, -34.7], [-863.1, 3074.6, -36.1], [-865.4, 3092.5, -37.5], [-868.4, 3110.2, -39.0], [-874.6, 3127.1, -40.4], [-883.0, 3143.0, -41.8], [-893.1, 3157.9, -43.3], [-905.1, 3171.3, -44.7], [-917.6, 3184.3, -46.2], [-929.4, 3197.8, -47.6], [-939.3, 3212.8, -49.1], [-947.8, 3228.7, -50.5], [-955.9, 3244.8, -52.0], [-964.3, 3260.7, -53.4], [-973.7, 3276.1, -54.8], [-983.7, 3291.1, -56.3], [-993.7, 3306.0, -57.7], [-1003.6, 3321.0, -59.1], [-1013.6, 3336.0, -60.5], [-1023.5, 3351.0, -61.9], [-1033.3, 3366.1, -63.3], [-1042.5, 3381.6, -64.6], [-1051.6, 3397.1, -65.9], [-1061.2, 3412.4, -67.2], [-1070.0, 3428.1, -68.3], [-1078.4, 3444.0, -69.4, "Aschenschlag"], [-1087.3, 3459.7, -70.5], [-1097.0, 3474.8, -71.4], [-1107.0, 3489.8, -72.3], [-1117.1, 3504.7, -73.2], [-1127.8, 3519.2, -74.1], [-1140.5, 3531.8, -74.9], [-1155.6, 3541.5, -75.6], [-1172.6, 3547.4, -76.4], [-1190.5, 3549.4, -77.2], [-1208.5, 3549.7, -78.0], [-1226.5, 3550.3, -78.7], [-1244.3, 3552.6, -79.5], [-1261.9, 3556.5, -80.2], [-1279.6, 3559.8, -81.0], [-1297.1, 3563.9, -81.7], [-1314.3, 3569.1, -82.5], [-1331.4, 3574.8, -83.3], [-1348.3, 3581.0, -84.0], [-1364.9, 3587.9, -84.8], [-1381.7, 3594.5, -85.5], [-1398.4, 3601.2, -86.3], [-1414.7, 3608.9, -87.0], [-1430.3, 3617.7, -87.8], [-1445.6, 3627.3, -88.6], [-1461.1, 3636.4, -89.3], [-1476.6, 3645.5, -90.1], [-1491.9, 3655.1, -90.8], [-1507.5, 3663.9, -91.5], [-1523.6, 3672.2, -92.2], [-1539.7, 3680.1, -93.0], [-1556.0, 3687.8, -93.6], [-1572.7, 3694.5, -94.3], [-1589.9, 3699.9, -94.9, "Seifgen"], [-1607.5, 3703.2, -95.6], [-1625.5, 3704.1, -96.2], [-1643.5, 3703.7, -96.8], [-1661.4, 3701.5, -97.3], [-1679.0, 3697.8, -97.9], [-1696.8, 3695.6, -98.4], [-1714.8, 3695.6, -99.0], [-1732.7, 3697.8, -99.5], [-1750.3, 3701.6, -100.0], [-1768.0, 3704.8, -100.6], [-1785.5, 3709.0, -101.1], [-1802.0, 3716.1, -101.6], [-1817.8, 3724.8, -102.1], [-1833.0, 3734.4, -102.7], [-1847.7, 3744.7, -103.2], [-1861.7, 3756.1, -103.7], [-1874.7, 3768.5, -104.3], [-1887.8, 3780.9, -104.8], [-1901.8, 3792.1, -105.3], [-1916.7, 3802.3, -105.8], [-1931.9, 3811.9, -106.4], [-1947.7, 3820.5, -106.9], [-1963.8, 3828.6, -107.4], [-1979.9, 3836.7, -107.9], [-1996.0, 3844.7, -108.4], [-2012.1, 3852.8, -108.8], [-2028.2, 3860.8, -109.3], [-2044.4, 3868.6, -109.7, "Bocksberg"], [-2061.1, 3875.4, -110.1], [-2078.1, 3881.2, -110.4], [-2095.1, 3887.2, -110.8], [-2111.9, 3893.8, -111.1], [-2128.7, 3900.1, -111.4], [-2146.4, 3903.4, -111.8], [-2164.4, 3903.9, -112.1], [-2182.3, 3902.5, -112.4], [-2199.8, 3898.4, -112.7], [-2216.8, 3892.5, -112.9], [-2233.4, 3885.6, -113.2], [-2249.6, 3877.8, -113.5], [-2265.7, 3869.7, -113.8], [-2281.8, 3861.6, -114.1], [-2298.0, 3853.6, -114.4], [-2314.3, 3846.1, -114.7], [-2331.1, 3839.6, -115.0], [-2347.8, 3832.8, -115.3], [-2364.0, 3825.0, -115.6], [-2380.0, 3816.8, -115.8], [-2395.6, 3807.8, -116.1], [-2410.8, 3798.2, -116.4], [-2426.5, 3789.4, -116.7], [-2442.6, 3781.2, -117.0], [-2458.7, 3773.2, -117.3], [-2474.8, 3765.2, -117.5], [-2490.9, 3757.1, -117.8], [-2507.0, 3749.0, -118.0], [-2522.7, 3740.4, -118.2], [-2537.4, 3730.0, -118.3], [-2550.5, 3717.6, -118.4], [-2561.3, 3703.2, -118.3], [-2567.8, 3686.6, -118.1], [-2567.7, 3668.7, -117.8, "Müllenbach"], [-2564.9, 3650.9, -117.4], [-2561.3, 3633.3, -116.8], [-2554.8, 3616.5, -116.1], [-2546.9, 3600.3, -115.3], [-2539.1, 3584.1, -114.4], [-2531.8, 3567.6, -113.5], [-2525.4, 3550.8, -112.4], [-2518.3, 3534.3, -111.4], [-2510.3, 3518.1, -110.3], [-2502.3, 3502.0, -109.2], [-2494.3, 3485.9, -108.1], [-2486.2, 3469.8, -107.0], [-2478.2, 3453.7, -105.9], [-2470.1, 3437.6, -104.8], [-2461.9, 3421.6, -103.6], [-2453.1, 3405.9, -102.5], [-2442.6, 3391.3, -101.4], [-2431.7, 3376.9, -100.3], [-2421.0, 3362.5, -99.2], [-2409.1, 3348.9, -98.1], [-2396.6, 3336.0, -97.0], [-2383.8, 3323.3, -95.8], [-2371.1, 3310.6, -94.7], [-2358.4, 3297.8, -93.6], [-2345.7, 3285.1, -92.5], [-2332.9, 3272.4, -91.4], [-2320.2, 3259.7, -90.3], [-2307.5, 3246.9, -89.1], [-2294.7, 3234.2, -88.0], [-2282.0, 3221.5, -86.9], [-2269.4, 3208.7, -85.8], [-2257.3, 3195.3, -84.7], [-2246.4, 3181.0, -83.6], [-2236.3, 3166.1, -82.5], [-2226.2, 3151.2, -81.3], [-2215.4, 3136.8, -80.2], [-2204.6, 3122.4, -79.1], [-2194.4, 3107.6, -78.0], [-2184.3, 3092.6, -76.9], [-2174.3, 3077.7, -75.8], [-2164.2, 3062.8, -74.6], [-2153.6, 3048.3, -73.5], [-2142.6, 3034.0, -72.4], [-2132.0, 3019.5, -71.3], [-2120.3, 3005.7, -70.2, "Rassrück"], [-2107.8, 2992.8, -69.1], [-2095.0, 2980.2, -67.9], [-2081.5, 2968.3, -66.8], [-2066.4, 2958.4, -65.7], [-2050.0, 2951.2, -64.6], [-2033.0, 2945.3, -63.5], [-2016.0, 2939.4, -62.3], [-1999.3, 2932.5, -61.2], [-1983.3, 2924.4, -60.1], [-1968.1, 2914.7, -59.0], [-1953.8, 2903.8, -57.9], [-1939.3, 2893.1, -56.7], [-1925.2, 2882.0, -55.6], [-1911.6, 2870.2, -54.5], [-1897.2, 2859.3, -53.4], [-1882.9, 2848.4, -52.3], [-1869.7, 2836.2, -51.1], [-1857.5, 2823.0, -50.0], [-1846.6, 2808.7, -48.9], [-1835.6, 2794.4, -47.8], [-1823.9, 2780.7, -46.7], [-1812.7, 2766.6, -45.5], [-1802.0, 2752.1, -44.4], [-1791.0, 2737.9, -43.3], [-1780.4, 2723.3, -42.2], [-1769.2, 2709.2, -41.1], [-1757.5, 2695.6, -39.9], [-1746.5, 2681.3, -38.8], [-1735.5, 2667.1, -37.7], [-1723.3, 2653.8, -36.6], [-1710.7, 2641.0, -35.5], [-1697.9, 2628.3, -34.4], [-1685.2, 2615.6, -33.3], [-1672.5, 2602.9, -32.2], [-1659.6, 2590.2, -31.1], [-1646.0, 2578.5, -30.1], [-1630.4, 2569.5, -29.1], [-1613.4, 2563.8, -28.1], [-1595.6, 2563.9, -27.2], [-1580.2, 2573.0, -26.4, "Scharfer Kopf"], [-1568.6, 2586.7, -25.6], [-1559.3, 2602.1, -24.9], [-1549.5, 2617.2, -24.3], [-1537.8, 2630.9, -23.7], [-1523.9, 2642.2, -23.1], [-1507.8, 2650.3, -22.6], [-1490.7, 2655.7, -22.1], [-1472.9, 2658.4, -21.7], [-1454.9, 2658.9, -21.2], [-1436.9, 2658.1, -20.7], [-1419.2, 2655.1, -20.3], [-1402.0, 2649.9, -19.9], [-1385.4, 2642.9, -19.4], [-1370.9, 2632.3, -19.0], [-1359.6, 2618.4, -18.5], [-1349.3, 2603.6, -18.1], [-1338.7, 2589.1, -17.6], [-1326.8, 2575.6, -17.2], [-1314.1, 2562.8, -16.8], [-1301.3, 2550.2, -16.3], [-1288.4, 2537.6, -15.9], [-1275.6, 2524.9, -15.4], [-1262.8, 2512.3, -15.0], [-1249.9, 2499.7, -14.6], [-1237.1, 2487.1, -14.1], [-1224.3, 2474.4, -13.7], [-1211.4, 2461.8, -13.2], [-1198.6, 2449.2, -12.8], [-1185.8, 2436.6, -12.4], [-1172.9, 2423.9, -11.9], [-1160.2, 2411.2, -11.5], [-1147.5, 2398.5, -11.0], [-1134.9, 2385.6, -10.6], [-1122.2, 2372.8, -10.1], [-1109.6, 2360.0, -9.7], [-1097.0, 2347.2, -9.3], [-1084.3, 2334.3, -8.8], [-1071.7, 2321.5, -8.4], [-1059.1, 2308.7, -8.0], [-1046.4, 2295.9, -7.6], [-1033.8, 2283.0, -7.2], [-1021.2, 2270.2, -6.8], [-1008.5, 2257.4, -6.5], [-995.9, 2244.6, -6.2], [-983.2, 2231.8, -6.0], [-970.4, 2219.1, -5.8, "Gegengerade"], [-957.6, 2206.5, -5.7], [-944.8, 2193.8, -5.6], [-932.0, 2181.2, -5.5], [-919.1, 2168.6, -5.5], [-906.3, 2155.9, -5.5], [-893.5, 2143.3, -5.6], [-880.7, 2130.7, -5.6], [-867.9, 2118.0, -5.7], [-855.0, 2105.4, -5.8], [-842.2, 2092.8, -5.9], [-829.4, 2080.1, -5.9], [-816.6, 2067.5, -6.0], [-803.9, 2054.7, -6.1], [-791.5, 2041.7, -6.2], [-779.3, 2028.4, -6.3], [-767.2, 2015.1, -6.4], [-755.1, 2001.7, -6.4], [-743.1, 1988.4, -6.5], [-731.0, 1975.0, -6.6], [-718.9, 1961.7, -6.7], [-706.9, 1948.3, -6.8], [-694.8, 1934.9, -6.9], [-682.7, 1921.6, -6.9], [-670.6, 1908.2, -7.0], [-658.6, 1894.9, -7.1], [-646.5, 1881.5, -7.2], [-634.4, 1868.2, -7.3], [-622.3, 1854.8, -7.3], [-610.2, 1841.5, -7.4], [-598.0, 1828.3, -7.5], [-585.7, 1815.2, -7.6], [-573.3, 1802.1, -7.7], [-560.9, 1789.0, -7.8], [-548.6, 1776.0, -7.8], [-536.2, 1762.9, -7.9], [-523.8, 1749.8, -8.0], [-511.4, 1736.8, -8.1], [-499.0, 1723.7, -8.2], [-486.6, 1710.6, -8.3], [-474.2, 1697.6, -8.3], [-461.9, 1684.5, -8.4], [-449.7, 1671.2, -8.5], [-438.5, 1657.2, -8.6], [-429.2, 1641.8, -8.7], [-421.3, 1625.6, -8.8], [-413.8, 1609.2, -8.8], [-406.3, 1592.9, -8.9], [-398.8, 1576.5, -9.0], [-391.4, 1560.1, -9.1], [-384.2, 1543.6, -9.2], [-378.6, 1526.5, -9.3], [-376.7, 1508.6, -9.4], [-377.7, 1490.7, -9.4], [-379.5, 1472.7, -9.6], [-381.6, 1454.9, -9.7], [-386.2, 1437.5, -9.8], [-395.6, 1422.3, -10.0], [-408.1, 1409.3, -10.2], [-421.9, 1397.8, -10.4], [-438.1, 1390.3, -10.6, "Nordkehre"], [-456.0, 1391.1, -10.9], [-473.3, 1396.1, -11.3], [-489.9, 1403.1, -11.7], [-504.0, 1414.1, -12.1], [-514.6, 1428.6, -12.5], [-523.6, 1444.2, -12.9], [-532.3, 1460.0, -13.4], [-540.6, 1475.9, -13.8], [-547.7, 1492.5, -14.3], [-553.2, 1509.6, -14.8], [-558.1, 1526.9, -15.3], [-562.9, 1544.3, -15.7], [-567.8, 1561.6, -16.2], [-573.9, 1578.5, -16.7], [-582.9, 1594.1, -17.2], [-594.2, 1608.1, -17.7], [-606.2, 1621.5, -18.1], [-618.3, 1634.8, -18.6], [-630.4, 1648.2, -19.1], [-642.5, 1661.4, -19.6], [-655.2, 1674.3, -20.0], [-669.4, 1685.2, -20.5], [-685.7, 1692.9, -21.0], [-702.6, 1698.9, -21.4], [-719.7, 1704.7, -21.9], [-736.8, 1710.3, -22.3], [-754.0, 1715.6, -22.7], [-771.7, 1718.9, -23.1], [-789.6, 1718.1, -23.4], [-807.3, 1714.6, -23.6], [-824.7, 1710.3, -23.8, "Hatzenbach"], [-842.2, 1705.8, -23.9], [-859.2, 1700.1, -23.9], [-875.6, 1692.6, -23.9], [-891.7, 1684.6, -23.8], [-907.8, 1676.6, -23.7], [-924.0, 1668.7, -23.5], [-940.9, 1662.5, -23.3], [-958.6, 1659.5, -23.1], [-976.5, 1657.2, -22.9], [-994.1, 1653.5, -22.7], [-1011.9, 1650.9, -22.4], [-1029.9, 1650.2, -22.2], [-1047.9, 1650.2, -22.0], [-1065.9, 1650.2, -21.7], [-1083.9, 1651.0, -21.5], [-1101.6, 1654.0, -21.2], [-1118.9, 1659.0, -21.0], [-1136.3, 1663.6, -20.8], [-1154.2, 1663.7, -20.5], [-1170.9, 1657.2, -20.3], [-1185.6, 1646.8, -20.0], [-1198.8, 1634.6, -19.8], [-1211.6, 1621.9, -19.6], [-1224.2, 1609.1, -19.3], [-1236.4, 1595.8, -19.1], [-1247.3, 1581.5, -18.8], [-1258.3, 1567.3, -18.6], [-1270.5, 1554.0, -18.4], [-1283.1, 1541.3, -18.1], [-1295.9, 1528.5, -17.9], [-1308.4, 1515.6, -17.6], [-1319.9, 1501.8, -17.4], [-1328.5, 1486.0, -17.2], [-1335.9, 1469.6, -16.9], [-1346.0, 1454.7, -16.6], [-1360.8, 1444.8, -16.4], [-1378.3, 1440.6, -16.1], [-1395.9, 1437.0, -15.8], [-1413.5, 1433.4, -15.5], [-1431.4, 1431.2, -15.1], [-1449.1, 1427.8, -14.7], [-1466.6, 1423.5, -14.3, "Hoheneichen"], [-1483.9, 1418.6, -13.8], [-1500.0, 1410.8, -13.3], [-1514.4, 1399.9, -12.7], [-1526.9, 1387.0, -12.1], [-1537.3, 1372.3, -11.5], [-1545.7, 1356.4, -10.9], [-1553.1, 1340.0, -10.2], [-1560.6, 1323.6, -9.5], [-1570.9, 1308.9, -8.9], [-1583.2, 1295.8, -8.2], [-1595.9, 1283.0, -7.5], [-1608.7, 1270.3, -6.8], [-1621.6, 1257.8, -6.1], [-1635.5, 1246.3, -5.5], [-1650.2, 1236.0, -4.8], [-1665.1, 1225.9, -4.2], [-1679.8, 1215.5, -3.6], [-1694.0, 1204.5, -3.0], [-1708.7, 1194.0, -2.4], [-1723.6, 1183.9, -1.9], [-1738.4, 1173.7, -1.5], [-1752.7, 1162.8, -1.1, "Quiddelbacher Höhe"], [-1767.1, 1152.0, -0.8], [-1781.5, 1141.2, -0.6], [-1794.9, 1129.2, -0.4], [-1807.8, 1116.6, -0.2], [-1820.5, 1103.8, -0.1], [-1833.2, 1091.1, -0.1], [-1846.0, 1078.4, -0.0], [-1858.6, 1065.6, -0.0], [-1870.9, 1052.4, -0.0], [-1882.0, 1038.2, -0.0], [-1892.9, 1023.9, -0.0], [-1904.9, 1010.5, -0.0], [-1917.6, 997.7, -0.0], [-1930.2, 984.9, -0.0], [-1942.6, 971.8, -0.0], [-1953.8, 957.7, -0.0], [-1964.6, 943.3, -0.0], [-1976.5, 929.9, -0.0], [-1989.0, 916.9, -0.0], [-2001.0, 903.5, -0.0], [-2011.9, 889.2, -0.1], [-2022.7, 874.8, -0.1], [-2033.4, 860.3, -0.2], [-2042.5, 844.8, -0.3], [-2049.8, 828.3, -0.4], [-2054.3, 810.9, -0.7], [-2055.7, 793.0, -0.9], [-2055.8, 775.0, -1.3, "Flugplatz"], [-2055.7, 757.0, -1.7], [-2054.8, 739.0, -2.2], [-2051.8, 721.3, -2.8], [-2048.0, 703.7, -3.4], [-2045.0, 685.9, -4.0], [-2040.5, 668.5, -4.7], [-2035.0, 651.4, -5.5], [-2029.2, 634.3, -6.2], [-2023.5, 617.2, -6.9], [-2017.9, 600.1, -7.7], [-2012.2, 583.1, -8.4], [-2006.4, 566.0, -9.2], [-2000.9, 548.9, -9.9], [-1995.9, 531.6, -10.7], [-1993.0, 513.8, -11.4], [-1992.3, 495.9, -12.2], [-1992.2, 477.9, -12.9], [-1992.2, 459.9, -13.7], [-1992.2, 441.9, -14.4], [-1992.2, 423.9, -15.2], [-1992.2, 405.9, -16.0], [-1992.2, 387.9, -16.7], [-1992.2, 369.9, -17.5], [-1992.2, 351.8, -18.2], [-1992.2, 333.8, -19.0], [-1992.2, 315.8, -19.7], [-1992.2, 297.8, -20.4], [-1992.2, 279.8, -21.1], [-1992.2, 261.8, -21.8], [-1992.3, 243.8, -22.5], [-1992.8, 225.8, -23.1], [-1995.2, 208.0, -23.8], [-1999.1, 190.4, -24.3, "Kottenborn"], [-2002.2, 172.7, -24.8], [-2006.2, 155.2, -25.3], [-2011.5, 138.0, -25.8], [-2017.2, 120.9, -26.2], [-2023.0, 103.9, -26.6], [-2028.7, 86.8, -27.0], [-2035.1, 70.0, -27.3], [-2042.2, 53.4, -27.7], [-2048.6, 36.6, -28.0], [-2055.5, 20.0, -28.3], [-2063.2, 3.7, -28.7], [-2070.5, -12.8, -29.0], [-2076.8, -29.6, -29.4], [-2083.7, -46.3, -29.7], [-2090.5, -62.9, -30.0], [-2096.9, -79.8, -30.4], [-2104.3, -96.2, -30.7], [-2112.3, -112.3, -31.0], [-2120.3, -128.4, -31.4], [-2128.4, -144.5, -31.7], [-2136.4, -160.6, -32.1], [-2144.4, -176.7, -32.4], [-2152.5, -192.8, -32.8], [-2160.6, -208.9, -33.2], [-2168.6, -225.0, -33.6], [-2176.7, -241.1, -34.1], [-2184.7, -257.2, -34.6], [-2192.8, -273.3, -35.3], [-2200.9, -289.4, -36.0], [-2209.3, -305.3, -36.8, "Schwedenkreuz"], [-2219.4, -320.2, -37.7], [-2231.3, -333.7, -38.7], [-2243.9, -346.5, -39.8], [-2256.6, -359.3, -41.0], [-2269.3, -372.0, -42.2], [-2282.2, -384.6, -43.5], [-2295.9, -396.3, -44.8], [-2311.0, -406.1, -46.1], [-2326.9, -414.5, -47.4], [-2343.0, -422.5, -48.8], [-2359.1, -430.6, -50.1], [-2375.2, -438.6, -51.5], [-2391.3, -446.7, -52.8], [-2407.4, -454.8, -54.2], [-2423.4, -463.0, -55.6], [-2438.8, -472.3, -57.1], [-2452.3, -484.1, -58.5], [-2463.1, -498.5, -60.0, "Aremberg"], [-2469.7, -515.1, -61.5], [-2467.8, -535.8, -63.2], [-2459.3, -551.6, -64.8], [-2447.9, -565.5, -66.4], [-2434.5, -577.5, -67.9], [-2419.3, -587.0, -69.5], [-2402.7, -594.1, -71.1], [-2385.7, -600.0, -72.7], [-2368.7, -605.9, -74.4], [-2352.0, -612.6, -76.0], [-2335.4, -619.5, -77.6], [-2318.6, -625.9, -79.2], [-2302.1, -633.1, -80.8], [-2285.9, -641.1, -82.5], [-2269.8, -649.1, -84.1], [-2253.7, -657.1, -85.7], [-2237.6, -665.3, -87.3], [-2221.6, -673.5, -88.9], [-2206.1, -682.7, -90.6], [-2191.1, -692.5, -92.2], [-2176.1, -702.4, -93.8], [-2161.2, -712.6, -95.4], [-2146.8, -723.3, -97.0], [-2133.4, -735.4, -98.7], [-2120.1, -747.5, -100.3], [-2105.8, -758.4, -101.9], [-2091.5, -769.4, -103.5], [-2078.2, -781.5, -105.1], [-2064.8, -793.6, -106.8], [-2050.5, -804.4, -108.4], [-2036.2, -815.4, -110.0], [-2022.6, -827.2, -111.6], [-2008.4, -838.3, -113.2], [-1994.1, -849.1, -114.9], [-1980.6, -861.1, -116.5], [-1967.7, -873.6, -118.1], [-1954.3, -885.6, -119.7], [-1939.9, -896.4, -121.3], [-1925.8, -907.6, -123.0], [-1912.6, -919.9, -124.6], [-1899.8, -932.6, -126.2], [-1887.1, -945.3, -127.8], [-1874.6, -958.2, -129.4], [-1862.8, -971.8, -131.1, "Fuchsröhre"], [-1852.1, -986.3, -132.7], [-1841.2, -1000.6, -134.3], [-1830.8, -1015.3, -135.9], [-1822.0, -1031.0, -137.5], [-1813.8, -1047.0, -139.1], [-1805.8, -1063.1, -140.7], [-1797.8, -1079.2, -142.2], [-1790.1, -1095.5, -143.7], [-1783.4, -1112.3, -145.2], [-1776.8, -1129.0, -146.6], [-1769.8, -1145.6, -147.9], [-1763.8, -1162.5, -149.1], [-1759.0, -1179.9, -150.2], [-1756.5, -1197.7, -151.1], [-1756.0, -1215.7, -152.0], [-1755.9, -1233.7, -152.8], [-1755.9, -1251.7, -153.5], [-1755.8, -1269.7, -154.1], [-1754.9, -1287.7, -154.7], [-1751.9, -1305.4, -155.3], [-1748.3, -1323.0, -155.8], [-1746.0, -1340.9, -156.4], [-1741.2, -1358.2, -156.9], [-1731.2, -1373.1, -157.4], [-1718.9, -1386.2, -157.9], [-1706.2, -1399.0, -158.5], [-1694.5, -1412.6, -159.0], [-1686.4, -1428.6, -159.6], [-1683.8, -1446.4, -160.1, "Adenauer Forst"], [-1684.7, -1464.3, -160.7], [-1688.0, -1482.0, -161.3], [-1691.1, -1499.7, -161.9], [-1691.6, -1517.7, -162.5], [-1688.5, -1535.4, -163.1], [-1679.7, -1551.0, -163.7], [-1667.7, -1564.4, -164.3], [-1655.1, -1577.2, -165.0], [-1642.0, -1589.6, -165.6], [-1628.0, -1600.9, -166.2], [-1613.4, -1611.5, -166.9], [-1599.2, -1622.5, -167.5], [-1584.7, -1633.2, -168.1], [-1570.6, -1644.4, -168.8], [-1557.5, -1656.7, -169.4], [-1544.7, -1669.4, -170.0], [-1532.1, -1682.2, -170.7], [-1520.1, -1695.6, -171.3], [-1509.2, -1710.0, -171.9], [-1498.1, -1724.1, -172.6], [-1485.8, -1737.3, -173.2], [-1473.2, -1750.1, -173.8], [-1460.4, -1762.8, -174.5], [-1447.7, -1775.5, -175.1], [-1435.0, -1788.3, -175.7], [-1422.2, -1801.0, -176.4], [-1409.3, -1813.5, -177.0], [-1395.6, -1825.2, -177.6], [-1381.1, -1835.8, -178.3], [-1367.3, -1847.4, -178.9], [-1354.5, -1860.1, -179.5], [-1343.0, -1873.8, -180.2], [-1332.3, -1888.4, -180.8], [-1320.7, -1902.1, -181.5], [-1308.4, -1915.3, -182.2], [-1297.0, -1929.2, -183.0], [-1286.7, -1944.0, -183.7], [-1277.0, -1959.1, -184.6], [-1268.4, -1974.9, -185.5], [-1260.8, -1991.2, -186.4, "Metzgesfeld"], [-1254.6, -2008.1, -187.5], [-1249.8, -2025.5, -188.6], [-1247.5, -2043.3, -189.7], [-1247.0, -2061.3, -190.9], [-1247.3, -2079.3, -192.2], [-1249.3, -2097.2, -193.4], [-1253.8, -2114.6, -194.7], [-1259.5, -2131.7, -196.0], [-1265.2, -2148.7, -197.3], [-1271.6, -2165.5, -198.7], [-1279.6, -2181.7, -200.0], [-1288.9, -2197.1, -201.3], [-1300.5, -2210.8, -202.6], [-1314.4, -2222.2, -203.9], [-1330.8, -2229.6, -205.3], [-1348.1, -2234.5, -206.6], [-1365.6, -2238.5, -207.9], [-1383.4, -2241.4, -209.2], [-1400.8, -2245.8, -210.5], [-1417.8, -2251.8, -211.8], [-1434.1, -2259.5, -213.1], [-1449.4, -2268.9, -214.4], [-1464.3, -2279.1, -215.6], [-1478.3, -2290.3, -216.9], [-1491.4, -2302.7, -218.1], [-1504.1, -2315.4, -219.2, "Kallenhard"], [-1516.1, -2328.9, -220.4], [-1524.8, -2344.5, -221.5], [-1527.6, -2362.2, -222.6], [-1525.0, -2380.0, -223.6], [-1516.4, -2395.7, -224.6], [-1504.1, -2408.8, -225.7], [-1489.7, -2419.6, -226.7], [-1474.0, -2428.4, -227.6], [-1458.0, -2436.6, -228.6], [-1441.9, -2444.8, -229.6], [-1426.4, -2453.8, -230.6], [-1411.3, -2463.6, -231.6], [-1396.3, -2473.6, -232.5], [-1381.4, -2483.6, -233.5], [-1366.8, -2494.3, -234.5], [-1353.4, -2506.3, -235.5], [-1341.1, -2519.4, -236.4], [-1330.5, -2533.9, -237.4], [-1321.8, -2549.7, -238.4], [-1314.9, -2566.3, -239.4], [-1311.2, -2583.9, -240.4], [-1309.1, -2601.7, -241.3], [-1305.1, -2619.3, -242.3], [-1299.2, -2636.3, -243.3], [-1291.6, -2652.6, -244.3], [-1281.5, -2667.4, -245.2], [-1269.4, -2680.8, -246.2], [-1256.7, -2693.6, -247.2], [-1244.0, -2706.3, -248.2], [-1230.8, -2718.5, -249.2], [-1216.1, -2728.9, -250.1], [-1199.6, -2735.9, -251.1], [-1181.9, -2739.0, -252.1], [-1163.9, -2739.7, -253.1], [-1145.9, -2739.4, -254.0], [-1128.0, -2737.6, -255.0], [-1110.5, -2733.3, -256.0], [-1093.5, -2727.5, -257.0], [-1077.2, -2719.8, -257.9], [-1061.9, -2710.4, -258.9], [-1046.4, -2701.2, -259.9], [-1030.5, -2692.8, -260.9], [-1014.7, -2684.1, -261.8], [-999.9, -2673.9, -262.8], [-985.6, -2662.9, -263.8], [-971.1, -2652.2, -264.7], [-957.4, -2640.6, -265.7], [-944.5, -2628.1, -266.6], [-932.2, -2614.9, -267.5], [-921.0, -2600.8, -268.4], [-909.4, -2587.1, -269.3, "Wehrseifen"], [-894.9, -2576.6, -270.1], [-874.6, -2572.2, -271.1], [-857.1, -2576.1, -271.8], [-840.4, -2582.8, -272.6], [-824.8, -2591.8, -273.3], [-810.4, -2602.6, -274.1], [-795.3, -2612.3, -274.8], [-778.6, -2619.0, -275.5], [-761.2, -2623.7, -276.2], [-743.7, -2627.9, -276.9], [-725.9, -2630.5, -277.6], [-708.1, -2632.9, -278.3], [-690.5, -2636.6, -279.0], [-672.6, -2639.1, -279.7], [-654.7, -2639.7, -280.4], [-636.7, -2639.5, -281.2], [-618.7, -2637.8, -281.9], [-601.1, -2634.1, -282.6], [-583.3, -2631.4, -283.3], [-565.4, -2630.0, -284.0], [-547.7, -2627.0, -284.7], [-530.4, -2622.1, -285.4], [-513.1, -2617.0, -286.1], [-495.5, -2613.4, -286.8], [-477.7, -2610.7, -287.5], [-458.7, -2602.1, -288.3], [-445.7, -2589.6, -289.0], [-428.4, -2578.0, -289.8], [-411.2, -2572.9, -290.4], [-390.4, -2573.2, -291.1], [-373.2, -2584.9, -291.8], [-364.9, -2603.7, -292.3], [-364.8, -2621.7, -292.7], [-366.0, -2639.6, -293.0], [-368.4, -2657.5, -293.2, "Breidscheid"], [-369.6, -2675.4, -293.2], [-367.2, -2693.2, -293.2], [-365.6, -2711.2, -293.0], [-365.1, -2729.2, -292.8], [-363.7, -2747.1, -292.5], [-360.0, -2764.7, -292.1], [-355.4, -2782.1, -291.7], [-348.4, -2798.6, -291.2], [-337.3, -2812.8, -290.6], [-324.7, -2825.6, -290.0], [-311.4, -2837.7, -289.4, "Ex-Mühle"], [-296.6, -2847.9, -288.7], [-280.3, -2855.6, -287.9], [-263.5, -2862.1, -287.2], [-247.1, -2869.4, -286.3], [-230.8, -2877.1, -285.5], [-214.1, -2883.9, -284.6], [-197.1, -2889.6, -283.6], [-180.0, -2895.4, -282.7], [-162.8, -2900.6, -281.8], [-145.3, -2904.9, -280.8], [-127.9, -2909.3, -279.9], [-110.4, -2913.6, -279.0], [-92.9, -2917.9, -278.0], [-75.1, -2920.8, -277.1], [-57.2, -2922.2, -276.1], [-39.4, -2924.9, -275.2], [-21.8, -2928.5, -274.2], [-3.9, -2930.3, -273.3], [14.1, -2930.8, -272.3], [32.1, -2932.0, -271.4], [49.7, -2935.4, -270.5], [67.4, -2939.1, -269.5], [85.0, -2942.5, -268.6], [102.3, -2947.4, -267.6], [119.3, -2953.4, -266.7], [135.7, -2960.9, -265.7], [151.3, -2969.8, -264.8], [165.9, -2980.3, -263.8], [180.3, -2991.2, -262.9], [194.8, -3001.8, -261.9], [208.3, -3013.7, -261.0], [221.5, -3025.9, -260.0], [235.6, -3037.1, -259.1], [250.1, -3047.7, -258.1], [264.5, -3058.6, -257.1], [279.8, -3068.0, -256.1], [296.7, -3074.2, -255.2, "Bergwerk"], [314.3, -3077.7, -254.2], [332.3, -3078.1, -253.1], [350.0, -3074.9, -252.1], [368.9, -3066.0, -250.9], [381.7, -3053.4, -249.9], [391.1, -3038.1, -248.8], [397.9, -3021.5, -247.8], [403.2, -3004.3, -246.7], [406.3, -2986.6, -245.7], [407.1, -2968.6, -244.6], [407.0, -2950.6, -243.6], [405.6, -2932.6, -242.5], [402.1, -2915.0, -241.5], [399.1, -2897.3, -240.4], [398.2, -2879.3, -239.3], [398.1, -2861.3, -238.3], [398.0, -2843.3, -237.2], [397.3, -2825.3, -236.2], [396.1, -2807.3, -235.1], [396.7, -2789.3, -234.1], [397.8, -2771.4, -233.0], [398.1, -2753.4, -232.0], [398.6, -2735.4, -230.9], [400.6, -2717.5, -229.8], [404.3, -2699.9, -228.8], [407.0, -2682.1, -227.7], [409.6, -2664.3, -226.7], [414.2, -2646.9, -225.6], [420.2, -2629.9, -224.6], [427.4, -2613.4, -223.5], [435.3, -2597.3, -222.5], [443.4, -2581.2, -221.4], [451.9, -2565.3, -220.4], [462.0, -2550.5, -219.3], [473.9, -2537.0, -218.2], [486.5, -2524.1, -217.2], [499.5, -2511.6, -216.1], [513.2, -2500.0, -215.1], [527.7, -2489.4, -214.0], [542.0, -2478.4, -213.0], [556.5, -2467.7, -211.9], [571.4, -2457.7, -210.9], [586.8, -2448.2, -209.8], [602.4, -2439.3, -208.7], [617.7, -2429.8, -207.7], [633.1, -2420.5, -206.6], [649.1, -2412.4, -205.6], [665.8, -2405.4, -204.5], [682.5, -2398.9, -203.5], [699.0, -2391.6, -202.4], [715.3, -2384.0, -201.4], [732.0, -2377.2, -200.3], [749.0, -2371.5, -199.2], [766.5, -2367.1, -198.2], [784.0, -2362.9, -197.1], [801.6, -2359.4, -196.1], [819.6, -2358.2, -195.0], [837.6, -2358.0, -194.0], [855.6, -2358.0, -192.9], [873.6, -2358.0, -191.8], [891.6, -2358.0, -190.7], [909.6, -2358.0, -189.6], [927.6, -2358.0, -188.5], [945.6, -2358.0, -187.3], [963.6, -2358.0, -186.2], [981.6, -2358.0, -184.9], [999.6, -2357.7, -183.7, "Kesselchen"], [1017.5, -2355.9, -182.3], [1035.1, -2352.2, -181.0], [1052.9, -2349.6, -179.6], [1070.9, -2348.9, -178.2], [1088.9, -2348.2, -176.8], [1106.7, -2345.6, -175.3], [1124.3, -2341.9, -173.8], [1142.2, -2339.9, -172.4], [1160.1, -2338.2, -170.9], [1177.8, -2334.7, -169.4], [1195.4, -2331.1, -167.9], [1213.1, -2327.8, -166.4], [1230.6, -2323.6, -165.0], [1248.1, -2319.5, -163.5], [1265.5, -2315.0, -162.0], [1283.0, -2310.5, -160.5], [1300.3, -2305.5, -159.0], [1317.3, -2299.6, -157.5], [1333.7, -2292.3, -156.0], [1349.9, -2284.3, -154.6], [1366.0, -2276.3, -153.1], [1381.8, -2267.7, -151.6], [1396.8, -2257.7, -150.1], [1411.1, -2246.8, -148.6], [1425.6, -2236.2, -147.2], [1439.7, -2224.9, -145.7], [1453.3, -2213.2, -144.3], [1467.7, -2202.4, -142.9], [1482.1, -2191.6, -141.5], [1496.4, -2180.7, -140.3], [1511.2, -2170.5, -139.0], [1526.4, -2160.7, -137.9], [1542.1, -2152.0, -136.9, "Mutkurve"], [1558.2, -2143.9, -136.0], [1574.3, -2135.8, -135.2], [1590.6, -2128.2, -134.5], [1607.4, -2121.7, -133.8], [1624.4, -2115.9, -133.3], [1641.5, -2110.2, -132.8], [1658.9, -2105.8, -132.3], [1676.8, -2103.9, -131.8], [1694.8, -2104.0, -131.4], [1712.6, -2106.4, -131.0], [1730.0, -2111.3, -130.6], [1747.0, -2117.0, -130.2], [1764.1, -2122.8, -129.8], [1780.8, -2129.5, -129.4], [1796.9, -2137.5, -128.9], [1812.3, -2146.7, -128.5], [1827.4, -2156.6, -128.1], [1842.4, -2166.6, -127.7], [1857.3, -2176.7, -127.3], [1871.8, -2187.3, -126.9], [1886.1, -2198.3, -126.5], [1900.6, -2209.0, -126.1], [1914.3, -2220.5, -125.7], [1927.3, -2233.0, -125.3], [1940.0, -2245.7, -124.9], [1952.8, -2258.5, -124.5], [1965.6, -2271.1, -124.0], [1978.8, -2283.3, -123.6], [1993.2, -2294.1, -123.2], [2008.1, -2304.2, -122.8], [2023.7, -2313.2, -122.4], [2040.5, -2319.7, -122.0], [2057.9, -2324.0, -121.6], [2075.5, -2328.1, -121.2], [2093.3, -2330.4, -120.8], [2111.2, -2332.0, -120.4], [2128.9, -2335.3, -120.0], [2146.6, -2338.6, -119.6], [2164.6, -2339.8, -119.1], [2182.5, -2340.9, -118.7], [2200.3, -2344.0, -118.3], [2217.7, -2348.3, -117.8], [2235.0, -2353.2, -117.4], [2251.8, -2359.7, -116.9], [2269.0, -2364.9, -116.3], [2289.9, -2367.1, -115.5], [2308.9, -2358.7, -114.7], [2321.1, -2342.1, -113.7], [2322.5, -2321.3, -112.5, "Klostertal"], [2312.7, -2303.1, -111.1], [2301.6, -2289.0, -109.9], [2289.9, -2275.2, -108.5], [2278.1, -2261.6, -107.1], [2266.3, -2248.1, -105.6], [2254.3, -2234.6, -104.0], [2241.9, -2221.6, -102.5], [2228.9, -2209.2, -100.9], [2215.5, -2197.1, -99.3], [2202.1, -2185.1, -97.7], [2188.6, -2173.2, -96.0], [2175.1, -2161.2, -94.4], [2161.7, -2149.3, -92.8], [2148.1, -2137.4, -91.2], [2134.6, -2125.6, -89.6], [2121.1, -2113.7, -87.9], [2107.7, -2101.7, -86.3], [2095.3, -2088.6, -84.7], [2085.9, -2073.3, -83.1, "Karussell"], [2079.5, -2056.5, -81.5], [2076.4, -2038.8, -79.9], [2083.6, -2019.5, -78.0], [2096.3, -2006.8, -76.4], [2112.4, -1999.0, -74.8], [2130.3, -1998.3, -73.3], [2148.1, -2000.7, -71.7], [2165.6, -2004.8, -70.2], [2182.2, -2011.8, -68.8], [2197.8, -2020.7, -67.3], [2213.1, -2030.2, -65.9], [2228.3, -2039.8, -64.5], [2243.3, -2049.8, -63.2], [2258.0, -2060.2, -61.9], [2272.5, -2071.0, -60.5], [2286.9, -2081.8, -59.2], [2301.3, -2092.5, -57.9], [2316.1, -2102.8, -56.6], [2331.2, -2112.6, -55.4], [2346.6, -2121.9, -54.1], [2362.0, -2131.2, -52.8], [2377.4, -2140.4, -51.5], [2393.0, -2149.5, -50.2], [2408.9, -2157.9, -48.9], [2425.3, -2165.3, -47.6], [2442.0, -2172.1, -46.4], [2458.7, -2178.9, -45.1], [2475.0, -2186.4, -43.8], [2490.5, -2195.5, -42.5], [2506.0, -2204.7, -41.2], [2522.5, -2211.8, -39.9], [2539.3, -2218.3, -38.6], [2555.6, -2225.9, -37.4], [2571.1, -2235.1, -36.1], [2585.2, -2246.3, -34.8], [2598.2, -2258.7, -33.5], [2610.9, -2271.5, -32.2], [2623.0, -2284.8, -30.9], [2634.0, -2299.0, -29.6], [2644.8, -2313.5, -28.4], [2655.7, -2327.8, -27.1], [2666.0, -2342.5, -25.8], [2675.8, -2357.6, -24.5], [2684.6, -2373.3, -23.2], [2691.8, -2389.8, -21.9], [2696.2, -2407.2, -20.6], [2697.4, -2425.2, -19.4], [2697.6, -2443.2, -18.1], [2697.6, -2461.2, -16.8], [2697.6, -2479.2, -15.6], [2697.7, -2497.2, -14.3], [2698.7, -2515.2, -13.1], [2702.5, -2532.7, -12.0], [2709.5, -2549.3, -10.9], [2718.3, -2565.0, -10.0], [2729.1, -2579.4, -9.2], [2741.4, -2592.5, -8.5], [2754.4, -2604.9, -8.0, "Hohe Acht"], [2769.0, -2615.3, -7.7], [2785.8, -2621.8, -7.5], [2803.3, -2626.1, -7.5], [2821.2, -2627.2, -7.7], [2838.9, -2624.2, -7.9], [2856.7, -2621.6, -8.3], [2874.5, -2619.0, -8.7], [2892.1, -2615.1, -9.1], [2909.8, -2612.0, -9.6], [2927.5, -2608.4, -10.1], [2945.0, -2604.1, -10.6], [2962.4, -2599.6, -11.1], [2979.6, -2594.2, -11.7], [2996.8, -2588.9, -12.2], [3014.2, -2584.4, -12.7], [3031.3, -2578.9, -13.3], [3047.7, -2571.4, -13.8], [3063.8, -2563.3, -14.4], [3079.3, -2554.2, -15.0, "Hedwigshöhe"], [3093.4, -2543.1, -15.6], [3106.5, -2530.7, -16.3], [3119.3, -2518.0, -16.9], [3132.0, -2505.3, -17.6], [3144.8, -2492.6, -18.3], [3157.9, -2480.4, -19.0], [3172.4, -2469.7, -19.7], [3188.5, -2461.6, -20.4], [3205.4, -2455.4, -21.1], [3222.4, -2449.6, -21.8], [3239.2, -2443.2, -22.6], [3255.5, -2435.5, -23.3], [3271.0, -2426.4, -24.0], [3285.1, -2415.2, -24.7], [3298.1, -2402.8, -25.4], [3310.8, -2390.0, -26.1], [3323.0, -2376.7, -26.8], [3333.8, -2362.4, -27.4], [3343.8, -2347.4, -28.0], [3353.1, -2332.0, -28.6], [3361.3, -2316.0, -29.2, "Wippermann"], [3368.2, -2299.4, -29.7], [3374.0, -2282.3, -30.2], [3377.8, -2264.7, -30.6], [3378.2, -2246.8, -31.0], [3375.2, -2229.0, -31.4], [3369.9, -2211.8, -31.8], [3364.1, -2194.8, -32.1], [3358.6, -2177.7, -32.5], [3352.9, -2160.6, -32.8], [3347.4, -2143.4, -33.1], [3342.8, -2126.0, -33.4], [3338.6, -2108.5, -33.7], [3335.1, -2090.9, -34.0], [3334.1, -2072.9, -34.3], [3335.1, -2055.0, -34.6], [3340.5, -2037.9, -34.9, "Eschbach"], [3351.1, -2023.3, -35.2], [3363.8, -2010.6, -35.5], [3377.8, -1999.4, -35.7], [3393.6, -1990.7, -36.0], [3410.3, -1983.9, -36.3], [3427.0, -1977.3, -36.5], [3443.6, -1970.3, -36.8], [3459.9, -1962.7, -37.0], [3474.3, -1952.0, -37.3], [3485.5, -1938.0, -37.5], [3493.3, -1921.8, -37.8], [3498.2, -1904.5, -38.0], [3502.4, -1887.0, -38.3], [3505.5, -1869.3, -38.5], [3506.4, -1851.3, -38.8], [3506.5, -1833.3, -39.0], [3506.5, -1815.3, -39.3], [3505.9, -1797.3, -39.6], [3503.4, -1779.5, -39.9], [3498.3, -1762.3, -40.2, "Brünnchen"], [3490.6, -1746.0, -40.5], [3478.6, -1732.7, -40.8], [3463.2, -1723.5, -41.1], [3446.3, -1717.5, -41.4], [3428.6, -1713.9, -41.8], [3410.7, -1712.9, -42.1], [3392.7, -1713.2, -42.5], [3374.8, -1715.4, -42.8], [3357.2, -1719.2, -43.1], [3339.4, -1721.4, -43.5], [3321.4, -1722.7, -43.9], [3303.6, -1725.5, -44.2], [3285.8, -1727.1, -44.6], [3268.0, -1724.3, -44.9, "Eiskurve"], [3250.6, -1719.6, -45.3], [3234.7, -1711.3, -45.7], [3221.4, -1699.3, -46.0], [3210.3, -1685.1, -46.4], [3201.9, -1669.2, -46.8], [3195.4, -1652.4, -47.2], [3188.4, -1635.9, -47.6], [3180.1, -1619.9, -47.9], [3170.7, -1604.5, -48.3], [3160.7, -1589.6, -48.7], [3150.0, -1575.1, -49.1], [3139.1, -1560.8, -49.5], [3128.9, -1546.0, -49.8], [3119.1, -1530.9, -50.2], [3110.3, -1515.1, -50.6], [3102.8, -1498.8, -51.0], [3096.5, -1481.9, -51.4], [3091.4, -1464.7, -51.7], [3088.9, -1446.9, -52.1], [3087.6, -1428.9, -52.4], [3084.7, -1411.1, -52.7], [3081.1, -1393.5, -53.0], [3079.6, -1375.6, -53.2], [3079.4, -1357.6, -53.4], [3079.3, -1339.6, -53.4], [3079.3, -1321.6, -53.4, "Pflanzgarten"], [3079.3, -1303.6, -53.3], [3079.3, -1285.6, -53.1], [3079.3, -1267.6, -52.8], [3079.3, -1249.6, -52.4], [3079.3, -1231.6, -51.9], [3079.3, -1213.6, -51.4], [3079.3, -1195.6, -50.8], [3078.6, -1177.6, -50.3], [3075.5, -1159.9, -49.7], [3069.1, -1143.1, -49.1], [3060.7, -1127.2, -48.5], [3050.0, -1112.7, -47.8], [3036.0, -1101.5, -47.2], [3019.4, -1094.8, -46.7], [3002.1, -1089.8, -46.1], [2984.9, -1084.3, -45.5, "Sprunghügel"], [2967.8, -1078.7, -44.9], [2950.7, -1073.0, -44.4], [2933.7, -1067.1, -43.9], [2917.1, -1060.3, -43.3], [2901.6, -1051.1, -42.8], [2887.3, -1040.2, -42.3], [2872.8, -1029.5, -41.8], [2858.7, -1018.4, -41.3], [2845.6, -1006.0, -40.8], [2833.6, -992.6, -40.3], [2822.8, -978.2, -39.8], [2811.6, -964.1, -39.3], [2799.2, -951.0, -38.8], [2786.6, -938.2, -38.3], [2773.9, -925.4, -37.8], [2762.0, -912.0, -37.3], [2751.8, -897.2, -36.8], [2743.2, -881.3, -36.3], [2735.1, -865.2, -35.9], [2727.1, -849.1, -35.4], [2719.1, -833.0, -34.9], [2711.0, -816.9, -34.4], [2702.9, -800.8, -33.9], [2694.8, -784.8, -33.4], [2685.8, -769.1, -32.9], [2675.4, -754.5, -32.5], [2664.5, -740.2, -32.0], [2653.7, -725.8, -31.6], [2641.1, -713.0, -31.3], [2626.3, -702.8, -30.9], [2610.7, -693.8, -30.6, "Schwalbenschwanz"], [2595.5, -684.1, -30.3], [2580.5, -674.2, -30.1], [2565.5, -664.2, -29.9], [2550.7, -654.0, -29.7], [2536.3, -643.1, -29.6], [2521.5, -632.9, -29.4], [2505.3, -625.1, -29.3], [2488.4, -619.0, -29.2], [2471.3, -613.3, -29.1], [2454.2, -607.6, -29.0], [2437.1, -601.9, -28.9], [2419.9, -596.8, -28.8], [2402.4, -592.6, -28.7], [2385.1, -587.6, -28.6], [2368.0, -581.8, -28.5], [2350.9, -576.2, -28.4], [2333.8, -570.5, -28.3], [2316.8, -564.8, -28.2], [2299.7, -559.1, -28.1], [2282.6, -553.4, -28.0], [2265.5, -547.8, -27.9], [2248.2, -542.7, -27.8], [2230.8, -538.3, -27.7], [2213.3, -534.0, -27.6], [2195.6, -530.8, -27.5], [2177.9, -527.4, -27.4], [2160.3, -523.8, -27.3], [2142.4, -522.3, -27.2], [2124.4, -522.4, -27.1], [2106.5, -524.0, -27.0], [2089.0, -528.4, -26.9], [2072.2, -535.0, -26.8], [2056.6, -543.8, -26.7], [2041.7, -553.9, -26.7], [2027.8, -565.3, -26.6], [2014.6, -577.5, -26.5], [2000.6, -588.9, -26.4], [1984.9, -597.7, -26.3], [1967.6, -602.4, -26.2], [1949.7, -603.6, -26.1], [1931.7, -603.0, -26.0], [1914.0, -599.7, -25.9], [1897.0, -593.9, -25.8], [1880.9, -585.9, -25.7], [1865.6, -576.3, -25.5], [1850.6, -566.3, -25.4], [1835.6, -556.4, -25.3], [1820.7, -546.3, -25.2], [1805.9, -536.1, -25.0], [1792.1, -524.6, -24.8], [1780.4, -510.9, -24.7, "Kleines Karussell"], [1773.1, -494.6, -24.4], [1771.1, -476.7, -24.2], [1773.0, -458.9, -24.0], [1780.2, -442.5, -23.7], [1791.6, -428.6, -23.4], [1804.3, -415.8, -23.2], [1817.8, -403.9, -22.9], [1832.8, -393.9, -22.6], [1848.6, -385.4, -22.3], [1864.8, -377.5, -22.0], [1881.4, -370.5, -21.7], [1898.3, -364.4, -21.4], [1915.3, -358.5, -21.1], [1932.2, -352.2, -20.9], [1948.8, -345.2, -20.6], [1965.6, -338.7, -20.3], [1982.2, -331.8, -20.0], [1998.4, -324.1, -19.7], [2014.4, -315.7, -19.4], [2029.6, -306.0, -19.1], [2043.3, -294.4, -18.8], [2055.8, -281.5, -18.5], [2067.1, -267.5, -18.2], [2077.1, -252.5, -17.9], [2085.7, -236.7, -17.6], [2092.3, -220.0, -17.3], [2098.0, -202.9, -17.0], [2103.0, -185.6, -16.8], [2106.0, -167.9, -16.5], [2106.8, -149.9, -16.2], [2106.8, -131.9, -15.9], [2106.1, -113.9, -15.6], [2103.2, -96.2, -15.3], [2098.0, -79.0, -15.0, "Galgenkopf"], [2090.6, -62.6, -14.7], [2080.9, -47.4, -14.4], [2069.6, -33.4, -14.1], [2056.0, -21.7, -13.8], [2041.6, -10.8, -13.5], [2027.3, 0.1, -13.1], [2012.5, 10.3, -12.8], [1997.5, 20.3, -12.5], [1982.5, 30.3, -12.2], [1967.4, 40.0, -11.9], [1951.7, 48.9, -11.6], [1936.3, 58.2, -11.3], [1921.3, 68.1, -11.0], [1906.3, 78.1, -10.7], [1891.0, 87.6, -10.4], [1875.4, 96.5, -10.1], [1860.0, 105.9, -9.8], [1844.7, 115.3, -9.5], [1829.0, 124.2, -9.1], [1813.8, 133.8, -8.8], [1798.3, 143.0, -8.5], [1782.4, 151.4, -8.2], [1766.6, 160.0, -7.9], [1751.2, 169.4, -7.6], [1735.9, 178.8, -7.3], [1720.3, 187.7, -7.0], [1705.0, 197.2, -6.7], [1689.6, 206.5, -6.4], [1673.9, 215.5, -6.1], [1658.7, 225.0, -5.8], [1643.2, 234.3, -5.4], [1627.6, 243.3, -5.1], [1612.4, 252.8, -4.8], [1597.0, 262.1, -4.5], [1581.3, 271.0, -4.2], [1566.1, 280.6, -3.9], [1550.6, 289.8, -3.6], [1535.0, 298.8, -3.3], [1519.8, 308.4, -3.0], [1504.3, 317.6, -2.7], [1488.7, 326.6, -2.4], [1473.6, 336.4, -2.1], [1458.6, 346.3, -1.8], [1443.5, 356.1, -1.5], [1427.9, 365.1, -1.2], [1412.5, 374.3, -1.0], [1397.4, 384.2, -0.7], [1382.4, 394.1, -0.5], [1367.2, 403.7, -0.3, "Döttinger Höhe"], [1351.5, 412.6, -0.1], [1336.2, 422.0, 0.1], [1321.1, 431.9, 0.2], [1306.1, 441.9, 0.3], [1290.8, 451.3, 0.4], [1275.2, 460.2, 0.5], [1259.9, 469.7, 0.6], [1244.5, 479.1, 0.7], [1228.9, 488.0, 0.8], [1213.6, 497.6, 0.9], [1198.6, 507.5, 1.0], [1183.5, 517.4, 1.1], [1168.1, 526.6, 1.2], [1152.5, 535.6, 1.3], [1137.4, 545.4, 1.4], [1122.4, 555.3, 1.5], [1107.3, 565.1, 1.6], [1091.7, 574.1, 1.6], [1076.2, 583.3, 1.7], [1061.1, 593.1, 1.8], [1046.1, 603.1, 1.9], [1030.9, 612.7, 2.0], [1015.3, 621.7, 2.1], [999.9, 631.0, 2.2], [984.6, 640.5, 2.3], [969.0, 649.4, 2.4], [953.7, 658.9, 2.4], [938.6, 668.8, 2.5], [923.6, 678.7, 2.6], [908.2, 688.1, 2.7], [892.6, 697.0, 2.8], [877.4, 706.6, 2.9], [862.4, 716.6, 3.0], [847.3, 726.4, 3.1], [831.8, 735.6, 3.2], [816.3, 744.6, 3.3], [801.2, 754.4, 3.3], [786.2, 764.3, 3.4], [771.0, 774.1, 3.5], [755.4, 783.1, 3.6], [740.0, 792.3, 3.7], [724.7, 801.9, 3.8], [709.1, 810.9, 3.9], [693.7, 820.1, 4.0], [678.4, 829.7, 4.1], [662.8, 838.7, 4.1], [647.4, 847.9, 4.2], [632.3, 857.8, 4.3], [617.3, 867.7, 4.4], [602.1, 877.3, 4.5], [586.4, 886.2, 4.6], [571.1, 895.6, 4.6], [555.8, 905.0, 4.7], [540.1, 914.0, 4.8], [524.8, 923.4, 4.8], [509.5, 932.8, 4.9, "Antoniusbuche"], [493.8, 941.7, 4.9], [478.6, 951.3, 4.9], [463.6, 961.2, 5.0], [448.5, 971.1, 5.0], [433.1, 980.3, 5.0], [417.5, 989.4, 5.0], [402.3, 999.1, 5.0], [387.3, 1009.0, 5.0], [372.4, 1019.0, 5.0], [357.4, 1029.0, 5.0], [342.4, 1039.0, 5.0], [327.4, 1049.0, 5.0], [312.5, 1059.1, 5.0], [298.1, 1069.8, 5.0], [284.8, 1082.0, 5.0], [272.0, 1094.6, 5.0], [259.3, 1107.4, 5.0], [246.5, 1120.1, 5.0], [233.8, 1132.8, 5.0], [221.1, 1145.5, 5.0], [208.4, 1158.3, 5.0], [195.9, 1171.3, 5.0], [184.5, 1185.2, 5.0], [173.7, 1199.6, 5.0], [162.0, 1213.3, 5.0], [149.5, 1226.3, 4.9], [137.3, 1239.5, 4.9], [126.3, 1253.7, 4.9], [115.6, 1268.2, 4.8, "Tiergarten"], [104.6, 1282.4, 4.8], [93.7, 1296.7, 4.7], [81.6, 1310.1, 4.6], [68.2, 1322.1, 4.6], [54.4, 1333.7, 4.5], [40.6, 1345.2, 4.4], [26.8, 1356.7, 4.3], [13.0, 1368.2, 4.2], [-0.9, 1379.8, 4.1], [-14.7, 1391.3, 4.0], [-28.5, 1402.8, 3.9], [-42.4, 1414.3, 3.8], [-56.2, 1425.9, 3.7], [-70.0, 1437.4, 3.6], [-83.8, 1448.9, 3.5], [-97.7, 1460.4, 3.4], [-111.5, 1472.0, 3.3], [-125.3, 1483.5, 3.2], [-139.2, 1495.0, 3.1], [-153.1, 1506.5, 3.0], [-166.9, 1517.9, 2.9], [-180.8, 1529.4, 2.8], [-194.7, 1540.9, 2.7], [-208.5, 1552.4, 2.6], [-222.4, 1563.8, 2.4], [-236.3, 1575.3, 2.3], [-250.0, 1586.9, 2.2], [-263.5, 1598.9, 2.1], [-276.5, 1611.4, 2.0], [-289.2, 1624.1, 1.9], [-302.0, 1636.8, 1.8], [-314.7, 1649.5, 1.7], [-327.4, 1662.2, 1.6], [-340.2, 1675.0, 1.5], [-352.9, 1687.7, 1.4], [-365.6, 1700.4, 1.3], [-378.3, 1713.2, 1.2], [-391.1, 1725.9, 1.1], [-403.8, 1738.6, 1.0], [-416.5, 1751.3, 0.9], [-429.3, 1764.1, 0.8], [-442.0, 1776.8, 0.7], [-454.7, 1789.5, 0.6], [-467.4, 1802.3, 0.5], [-480.2, 1815.0, 0.3], [-492.9, 1827.7, 0.2], [-505.6, 1840.4, -0.0], [-518.4, 1853.2, -0.2]];
+const B = 12, HB = B / 2, PLANKE = HB + 7;
+const kurve = new THREE.CatmullRomCurve3(KP.map(k => new THREE.Vector3(k[0], k[2], k[1])), true, 'centripetal');
+const LAENGE = kurve.getLength();
+const N = Math.round(LAENGE / 2);
+const roh = kurve.getSpacedPoints(N); roh.pop();
+const SP = LAENGE / N;
+const px = new Float32Array(N), py = new Float32Array(N), pz = new Float32Array(N);
+const tx = new Float32Array(N), tz = new Float32Array(N), sx = new Float32Array(N), sz = new Float32Array(N);
+const kr = new Float32Array(N), tb = new Float32Array(N), dist = new Float32Array(N);
+for (let i = 0; i < N; i++) { px[i] = roh[i].x; py[i] = roh[i].y; pz[i] = roh[i].z; dist[i] = i * SP; }
+const W = i => (i % N + N) % N;
+for (let i = 0; i < N; i++) {
+  const a = W(i + 1), b = W(i - 1);
+  let dx = px[a] - px[b], dz = pz[a] - pz[b]; const l = Math.hypot(dx, dz); dx /= l; dz /= l;
+  tx[i] = dx; tz[i] = dz; sx[i] = -dz; sz[i] = dx;   // s = rechts
+}
+for (let i = 0; i < N; i++) {
+  const a = W(i - 5), b = W(i + 5);
+  kr[i] = Math.atan2(tx[a] * tz[b] - tz[a] * tx[b], tx[a] * tx[b] + tz[a] * tz[b]) / (10 * SP); // >0 = Rechtskurve
+}
+const ausrichtung = i => Math.atan2(tx[i], tz[i]);
+function naechsteProbeBrute(x, z) { let b = 0, bd = 1e18; for (let i = 0; i < N; i++) { const d = (px[i] - x) ** 2 + (pz[i] - z) ** 2; if (d < bd) { bd = d; b = i; } } return b; }
+const ABSCHNITTE = [];
+KP.forEach(k => { if (k[3]) ABSCHNITTE.push({ i: naechsteProbeBrute(k[0], k[1]), name: k[3] }); });
+ABSCHNITTE.sort((a, b) => a.i - b.i);
+ABSCHNITTE.forEach(a => a.start = W(a.i - 25));
+function abschnittBei(idx) {
+  let ab = null, maxA = null;
+  for (const a of ABSCHNITTE) { if (idx >= a.start && (!ab || a.start > ab.start)) ab = a; if (!maxA || a.start > maxA.start) maxA = a; }
+  return (ab || maxA).name;
+}
+const iKar = ABSCHNITTE.find(a => a.name === 'Karussell').i;
+for (let k = -45; k <= 45; k++) {
+  const i = W(iKar + k), w = Math.cos(k / 45 * Math.PI / 2) ** 2;
+  tb[i] = -Math.sign(kr[iKar]) * Math.tan(0.12) * w;
+}
+const ZELLE = 25, raster = new Map();
+const zKey = (ix, iz) => (ix + 2000) * 5000 + (iz + 2000);
+for (let i = 0; i < N; i++) {
+  const k = zKey(Math.floor(px[i] / ZELLE), Math.floor(pz[i] / ZELLE));
+  let l = raster.get(k); if (!l) raster.set(k, l = []); l.push(i);
+}
+function naechsteProbe(x, z, r) {
+  const cx = Math.floor(x / ZELLE), cz = Math.floor(z / ZELLE);
+  let b = -1, bd = 1e18;
+  for (let a = -r; a <= r; a++) for (let c = -r; c <= r; c++) {
+    const l = raster.get(zKey(cx + a, cz + c)); if (!l) continue;
+    for (let j = 0; j < l.length; j++) { const i = l[j], d = (px[i] - x) ** 2 + (pz[i] - z) ** 2; if (d < bd) { bd = d; b = i; } }
+  }
+  return b < 0 ? null : { i: b, d: Math.sqrt(bd) };
+}
+const nahStart = i => i < 70 || i > N - 70;
+// Freier Raum links/rechts: Leitplanke nie auf einem anderen Streckenteil
+const PLL = new Float32Array(N), PLR = new Float32Array(N);
+for (let i = 0; i < N; i++) {
+  let fl = PLANKE, fr = PLANKE;
+  const cx = Math.floor(px[i] / ZELLE), cz = Math.floor(pz[i] / ZELLE);
+  for (let a = -2; a <= 2; a++) for (let c = -2; c <= 2; c++) {
+    const l = raster.get(zKey(cx + a, cz + c)); if (!l) continue;
+    for (const j of l) {
+      let di = Math.abs(j - i); di = Math.min(di, N - di); if (di < 8) continue;
+      const vx = px[j] - px[i], vz = pz[j] - pz[i], lat = vx * sx[i] + vz * sz[i], lon = vx * tx[i] + vz * tz[i];
+      if (Math.abs(lon) > Math.abs(lat)) continue;
+      const half = Math.hypot(vx, vz) / 2;
+      if (lat > 0) fr = Math.min(fr, half); else fl = Math.min(fl, half);
+    }
+  }
+  const rad = 1 / Math.max(Math.abs(kr[i]), 1e-6);
+  if (kr[i] > 0) fr = Math.min(fr, rad * .9); else fl = Math.min(fl, rad * .9);
+  PLL[i] = Math.max(fl, HB + 1.6); PLR[i] = Math.max(fr, HB + 1.6);
+}
+for (const A_ of [PLL, PLR]) {
+  const t = Float32Array.from(A_);
+  for (let i = 0; i < N; i++) { let m = 1e9; for (let k = -6; k <= 6; k++) m = Math.min(m, t[W(i + k)]); A_[i] = m; }
+  const t2 = Float32Array.from(A_);
+  for (let i = 0; i < N; i++) { let q = 0; for (let k = -4; k <= 4; k++) q += t2[W(i + k)]; A_[i] = q / 9; }
+}
+const planke = (i, s) => s > 0 ? PLR[i] : PLL[i];
+let mx = 0, mz = 0; for (let i = 0; i < N; i++) { mx += px[i]; mz += pz[i]; } mx /= N; mz /= N;
+let bx0 = 1e9, bx1 = -1e9, bz0 = 1e9, bz1 = -1e9;
+for (let i = 0; i < N; i++) { bx0 = Math.min(bx0, px[i]); bx1 = Math.max(bx1, px[i]); bz0 = Math.min(bz0, pz[i]); bz1 = Math.max(bz1, pz[i]); }
+const BG = 64, BRAND = 7000, BX0 = bx0 - BRAND, BZ0 = bz0 - BRAND;
+const BNX = Math.ceil((bx1 - bx0 + 2 * BRAND) / BG) + 1, BNZ = Math.ceil((bz1 - bz0 + 2 * BRAND) / BG) + 1;
+const BASIS = new Float32Array(BNX * BNZ);
+{
+  const kp = []; for (let k = 0; k < KP.length; k += 6) kp.push(KP[k]);
+  for (let j = 0; j < BNZ; j++) for (let i = 0; i < BNX; i++) {
+    const x = BX0 + i * BG, z = BZ0 + j * BG;
+    let s = 0, w = 0, dmin = 1e18;
+    for (let q = 0; q < kp.length; q++) { const k = kp[q], d2 = (k[0] - x) ** 2 + (k[1] - z) ** 2; if (d2 < dmin) dmin = d2; const g = 1 / (d2 + 40000); s += k[2] * g; w += g; }
+    let h = s / w;
+    h += (fbm(x * .0012 + 7, z * .0012 - 3) - .5) * 120 + (fbm(x * .005, z * .005, 3) - .5) * 30;
+    h += smooth(500, 2500, Math.sqrt(dmin)) * (30 + fbm(x * .0009, z * .0009, 4) * 260);
+    BASIS[j * BNX + i] = h;
+  }
+}
+function basisH(x, z) {
+  let fx = (x - BX0) / BG, fz = (z - BZ0) / BG;
+  fx = clamp(fx, 0, BNX - 1.001); fz = clamp(fz, 0, BNZ - 1.001);
+  const i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j, o = j * BNX + i;
+  const a = BASIS[o], b = BASIS[o + 1], c = BASIS[o + BNX], d = BASIS[o + BNX + 1];
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v + (vnoise(x * .03, z * .03) - .5) * 2;
+}
+// Bodenhöhe mit vorgegebener Kandidatenliste (schnell, für das Gelände)
+function bodenHListe(x, z, liste) {
+  const fern = basisH(x, z);
+  let bi = -1, bd = 1e18, h = 1e9;
+  for (let k = 0; k < liste.length; k++) {
+    const j = liste[k], d2 = (px[j] - x) ** 2 + (pz[j] - z) ** 2;
+    if (d2 < bd) { bd = d2; bi = j; }
+    if (d2 < 22500) { const lim = py[j] - .3 - Math.abs(tb[j]) * HB + Math.max(0, Math.sqrt(d2) - (HB + 5)) * .75; if (lim < h) h = lim; }
+  }
+  if (bi < 0) return fern;
+  const d = Math.sqrt(bd), nah = py[bi] - .3 - Math.abs(tb[bi]) * HB, flach = HB + 8 + (nahStart(bi) ? 30 : 0);
+  return Math.min(h, nah + (fern - nah) * smooth(flach, flach + 80, d));
+}
+function bodenH(x, z) {
+  const fern = basisH(x, z);
+  const n = naechsteProbe(x, z, 5);
+  if (!n) return fern;
+  const i = n.i, nah = py[i] - .3 - Math.abs(tb[i]) * HB;
+  const flach = HB + 8 + (nahStart(i) ? 30 : 0);
+  let h = nah + (fern - nah) * smooth(flach, flach + 80, n.d);
+  // Gelände darf nie über einen Streckenteil ragen (Böschung max. ~37°)
+  const cx = Math.floor(x / ZELLE), cz = Math.floor(z / ZELLE);
+  for (let a = -3; a <= 3; a++) for (let c = -3; c <= 3; c++) {
+    const l = raster.get(zKey(cx + a, cz + c)); if (!l) continue;
+    for (let k = 0; k < l.length; k++) {
+      const j = l[k], d = Math.hypot(px[j] - x, pz[j] - z);
+      const lim = py[j] - .3 - Math.abs(tb[j]) * HB + Math.max(0, d - (HB + 5)) * .75;
+      if (lim < h) h = lim;
+    }
+  }
+  return h;
+}
+
+// ================================================================
+//  Fahrphysik (für Spieler und Computer identisch)
+// ================================================================
+const DT = 1 / 120, VMAX = 92, RADSTAND = 2.6;
+const GANG_MAX = [0, 16, 28, 40, 53, 67, 80, 92];
+function neuesAuto() {
+  return {
+    x: 0, z: 0, y: 0, h: 0, vx: 0, vz: 0, r: 0, lenk: 0, idx: 0, d: 0, beta: 0, v: 0, vF: 0,
+    aufStrasse: true, gang: 1, rpm: 900, raddreh: 0, pitch: 0, roll: 0, bremst: false, last: 0, quietsch: 0, lenkWinkel: 0,
+    vmax: 0, zeit: 0, runde: 0, rundeStart: 0, rundeAktiv: false, halb: false, letzte: 0, beste: 0, fortschritt: 0,
+    punkte: 0, driftPunkte: 0, driftZeit: 0, driftPause: 0, mult: 1, besterDrift: 0, falsch: 0
+  };
+}
+function driftReset(A) { A.driftPunkte = 0; A.driftZeit = 0; A.driftPause = 0; A.mult = 1; }
+function aufStartSetzen(A) {
+  const i = W(N - 22);
+  A.x = px[i]; A.z = pz[i]; A.y = py[i]; A.h = ausrichtung(i); A.vx = A.vz = A.r = A.lenk = 0; A.idx = i;
+  A.v = A.vF = A.beta = 0; A.rpm = 900; A.gang = 1;
+  A.zeit = 0; A.runde = 0; A.rundeStart = 0; A.rundeAktiv = false; A.halb = false; A.letzte = 0; A.beste = 0; A.fortschritt = 0;
+  A.punkte = 0; A.besterDrift = 0; A.falsch = 0; A.vmax = 0; driftReset(A);
+}
+const KEIN_EV = { aufprall() {}, rundeLos() {}, rundeFertig() {}, driftFertig() {}, driftWeg() {} };
+
+function physik(A, e, dt, ev) {
+  A.zeit += dt;
+  if (e.direkt) A.lenk = clamp(e.lenk, -1, 1);
+  else {
+    // Tasten-Lenkung: bei hohem Tempo langsamer einlenken, schnell zurück zur Mitte
+    const vv0 = Math.hypot(A.vx, A.vz);
+    const rate = e.lenk === 0 ? 10 : (Math.sign(e.lenk) !== Math.sign(A.lenk) && A.lenk !== 0 ? 9 : 4.5 / (1 + vv0 / 35));
+    A.lenk += (e.lenk - A.lenk) * Math.min(1, dt * rate);
+  }
+
+  const fx = Math.sin(A.h), fz = Math.cos(A.h), rx = -fz, rz = fx;
+  let vF = A.vx * fx + A.vz * fz, vR = A.vx * rx + A.vz * rz;
+  const v = Math.hypot(vF, vR);
+
+  let a = 0;
+  A.bremst = false;
+  if (e.gas) a += vF >= -.5 ? 14 * Math.max(0, 1 - (Math.max(vF, 0) / VMAX) ** 2) : 16;
+  if (e.bremse) { if (vF > .5) { a -= 22.5 + vF * .175; A.bremst = true; } else if (vF > -11) a -= 6; }
+  if (e.hand) { a -= Math.sign(vF) * 2.5; A.bremst = true; }
+  a -= vF * Math.abs(vF) * .0007;
+  if (Math.abs(vF) > .2) a -= Math.sign(vF) * .5;
+  if (!A.aufStrasse) a -= vF * .1;
+  vF += a * dt;
+  if (!e.gas && !e.bremse && Math.abs(vF) < .25) vF = 0;
+
+  const beta = Math.atan2(vR, Math.max(Math.abs(vF), 1)), ab = Math.abs(beta);
+  let g;
+  if (e.hand) g = 1.4;
+  else if (ab > .16 && e.gas && v > 6) g = 2.6;
+  else if (ab > .16) g = 6.5;
+  else g = 9.5;
+  if (!e.hand && e.gas && Math.abs(A.lenk) > .9 && v > 9 && v < 22 && ab <= .16) g = 4.5;
+  if (!A.aufStrasse) g = Math.min(g, 5);
+  vR *= Math.exp(-g * dt);
+
+  A.lenkWinkel = (e.direkt ? A.lenk : Math.sign(A.lenk) * Math.abs(A.lenk) ** 1.6) * .6 / (1 + v / 30);
+  let rz0 = vF * Math.tan(A.lenkWinkel) / RADSTAND;
+  const aLat = A.aufStrasse ? 16 + v * .05 : 11;
+  const rMax = aLat / Math.max(v, 4) * (ab > .16 ? 1.9 : 1.15) + (e.hand ? .85 : 0);
+  rz0 = clamp(rz0, -rMax, rMax);
+  A.r += (rz0 - A.r) * Math.min(1, dt * (ab > .16 ? 3.5 : 7));
+  A.h -= A.r * dt;
+
+  A.vx = fx * vF + rx * vR; A.vz = fz * vF + rz * vR;
+  A.x += A.vx * dt; A.z += A.vz * dt;
+  A.vF = vF; A.beta = beta; A.v = v; if (v > A.vmax) A.vmax = v;
+  A.last = e.gas ? 1 : 0;
+
+  let b = A.idx, bd = 1e18;
+  for (let k = -40; k <= 40; k++) { const i = W(A.idx + k), d = (px[i] - A.x) ** 2 + (pz[i] - A.z) ** 2; if (d < bd) { bd = d; b = i; } }
+  if (bd > 900) { const n = naechsteProbe(A.x, A.z, 3); if (n) b = n.i; }
+  const vorher = A.idx; A.idx = b;
+  let schritt = b - vorher; if (schritt > N / 2) schritt -= N; if (schritt < -N / 2) schritt += N;
+  A.fortschritt += schritt;
+  const dx = A.x - px[b], dz = A.z - pz[b];
+  let d = dx * sx[b] + dz * sz[b];
+  const entlang = dx * tx[b] + dz * tz[b];
+  const steig = (py[W(b + 1)] - py[W(b - 1)]) / (2 * SP);
+  A.d = d;
+  A.aufStrasse = Math.abs(d) < HB + 1.3;
+
+  const grenze = planke(b, Math.sign(d)) - 1.05;
+  if (Math.abs(d) > grenze) {
+    const s = Math.sign(d), zuviel = Math.abs(d) - grenze;
+    A.x -= sx[b] * s * zuviel; A.z -= sz[b] * s * zuviel; d = s * grenze; A.d = d;
+    const vq = A.vx * sx[b] + A.vz * sz[b];
+    if (vq * s > 0) {
+      A.vx -= sx[b] * vq * 1.45; A.vz -= sz[b] * vq * 1.45;
+      const aufprall = Math.abs(vq);
+      const daempf = 1 - Math.min(.35, aufprall * .03);
+      A.vx *= daempf; A.vz *= daempf; A.r *= .4;
+      if (aufprall > 3) {
+        ev.aufprall(A, aufprall, s);
+        if (A.driftPunkte > 0 && aufprall > 4) { ev.driftWeg(A, 'LEITPLANKE!', A.driftPunkte); driftReset(A); }
+      }
+    }
+  }
+  const hBasis = py[b] + steig * entlang;
+  A.y = A.aufStrasse ? hBasis + d * tb[b] : hBasis - .3 - Math.abs(tb[b]) * HB;
+  const rel = A.h - ausrichtung(b), cr = Math.cos(rel), sr = Math.sin(rel);
+  A.pitch = Math.atan(steig * cr + (A.aufStrasse ? tb[b] : 0) * -sr);
+  A.roll = A.aufStrasse ? -Math.atan(tb[b]) * cr : 0;
+
+  // Runden
+  if (A.idx > N * .45 && A.idx < N * .55) A.halb = true;
+  if (vorher > N - 60 && A.idx < 60) {
+    if (!A.rundeAktiv) { A.rundeAktiv = true; A.rundeStart = A.zeit; A.runde = 1; A.halb = false; ev.rundeLos(A); }
+    else if (A.halb) {
+      const zt = A.zeit - A.rundeStart;
+      A.letzte = zt; A.runde++; A.rundeStart = A.zeit; A.halb = false;
+      const neu = !A.beste || zt < A.beste; if (neu) A.beste = zt;
+      ev.rundeFertig(A, zt, neu);
+    }
+  }
+  if (v > 4 && (A.vx * tx[b] + A.vz * tz[b]) / v < -.4) A.falsch += dt; else A.falsch = 0;
+
+  const vv = Math.abs(vF);
+  let gang = 1; while (gang < 7 && vv > GANG_MAX[gang]) gang++;
+  A.gang = vF < -.5 ? 0 : gang;
+  const zielRpm = 900 + 7100 * clamp(vv / GANG_MAX[gang], 0, 1) + (e.gas ? ab * 2600 + (vv < 2 ? 1500 : 0) : 0);
+  A.rpm += (Math.min(zielRpm, 8300) - A.rpm) * Math.min(1, dt * 10);
+  A.raddreh += vF * dt / .34;
+
+  // Drift-Wertung
+  A.quietsch = A.aufStrasse ? clamp((ab - .1) * 2.5, 0, 1) * clamp(v / 12, 0, 1) : 0;
+  if (ab > 1.8 && v > 5 && A.driftPunkte > 0) { ev.driftWeg(A, 'DREHER!', A.driftPunkte); driftReset(A); return; }
+  if (!A.aufStrasse && A.driftPunkte > 0) { ev.driftWeg(A, 'IN DER WIESE', A.driftPunkte); driftReset(A); return; }
+  const aktiv = A.aufStrasse && v > 9 && ab > .2 && vF > 2;
+  if (aktiv) {
+    A.driftZeit += dt; A.driftPause = 0;
+    A.mult = Math.min(5, 1 + Math.floor(A.driftZeit / 2.5));
+    A.driftPunkte += dt * (v * 3.6) * (ab * 57.3) * .08 * A.mult;
+  } else if (A.driftPunkte > 0) {
+    A.driftPause += dt;
+    if (A.driftPause > .9) {
+      const p = Math.round(A.driftPunkte);
+      A.punkte += p;
+      if (p > A.besterDrift) A.besterDrift = p;
+      ev.driftFertig(A, p);
+      driftReset(A);
+    }
+  }
+}
+
+// ================================================================
+//  Computerfahrer: Ideallinie, Tempoprofil, Regler
+// ================================================================
+const LX = new Float32Array(N), LZ = new Float32Array(N), LK = new Float32Array(N), LV = new Float32Array(N);
+function ideallinieBerechnen(rand) {
+  const lim = HB - rand;
+  const off = new Float64Array(N), qx = new Float64Array(N), qz = new Float64Array(N);
+  for (let it = 0; it < 600; it++) {
+    for (let i = 0; i < N; i++) { qx[i] = px[i] + sx[i] * off[i]; qz[i] = pz[i] + sz[i] * off[i]; }
+    const k = it < 300 ? 6 : 3;
+    for (let i = 0; i < N; i++) {
+      const a = W(i - k), b = W(i + k);
+      const mxx = (qx[a] + qx[b]) / 2, mzz = (qz[a] + qz[b]) / 2;
+      const li = Math.min(lim, Math.max(.5, 1 / Math.max(Math.abs(kr[i]), 1e-6) - 11));
+      const ziel = clamp((mxx - px[i]) * sx[i] + (mzz - pz[i]) * sz[i], -li, li);
+      off[i] += (ziel - off[i]) * .5;
+    }
+  }
+  for (let i = 0; i < N; i++) { LX[i] = px[i] + sx[i] * off[i]; LZ[i] = pz[i] + sz[i] * off[i]; }
+  for (let i = 0; i < N; i++) {
+    const a = W(i - 4), b = W(i + 4), c = W(i - 3), d = W(i + 3);
+    const h1 = Math.atan2(LX[c] - LX[a], LZ[c] - LZ[a]), h2_ = Math.atan2(LX[b] - LX[d], LZ[b] - LZ[d]);
+    let s = 0; for (let j = -4; j < 4; j++) s += Math.hypot(LX[W(i + j + 1)] - LX[W(i + j)], LZ[W(i + j + 1)] - LZ[W(i + j)]);
+    LK[i] = -wrapW(h2_ - h1) / (s * 7 / 8);   // >0 = Rechtskurve
+  }
+  // glätten
+  const t = Float32Array.from(LK);
+  for (let i = 0; i < N; i++) { let s = 0; for (let j = -3; j <= 3; j++) s += t[W(i + j)]; LK[i] = s / 7; }
+}
+function tempoprofil(P) {
+  for (let i = 0; i < N; i++) {
+    const k = Math.abs(LK[i]) + 1e-6;
+    const drift = P.drift && 1 / k < P.rDrift;
+    LV[i] = Math.min(85, Math.sqrt((drift ? P.aDrift : P.aGrip) / k));
+  }
+  for (let r = 0; r < 2; r++) {
+    for (let j = 0; j < N; j++) { const i = W(j + 1), p = W(j); const v = LV[p]; const acc = 14 * Math.max(0, 1 - (v / VMAX) ** 2) - .0007 * v * v - .5; LV[i] = Math.min(LV[i], Math.sqrt(v * v + 2 * Math.max(acc, .1) * SP)); }
+    for (let j = N - 1; j >= 0; j--) { const i = W(j), n = W(j + 1); LV[i] = Math.min(LV[i], Math.sqrt(LV[n] ** 2 + 2 * P.bremsA * SP)); }
+  }
+}
+function kiEingabe(A, P, K) {
+  const v = A.v, i = A.idx;
+  let rVor = 1e9; for (let k = 0; k < 12; k++) rVor = Math.min(rVor, 1 / Math.max(Math.abs(LK[W(i + k)]), 1e-6));
+  const vor = Math.max(2, Math.round(Math.min(P.l0 + v * P.l1, Math.max(4, rVor * P.rv)) / SP));
+  const j = W(i + vor);
+  const ex = LX[j] - A.x, ez = LZ[j] - A.z, Ld = Math.max(Math.hypot(ex, ez), 3);
+  const psiD = Math.atan2(ex, ez);
+  const psiV = v > 3 ? Math.atan2(A.vx, A.vz) : A.h;
+  let kNah = 0, kFern = 0;
+  const fNah = Math.round((2 + v * P.vorausDrift) / SP), fFern = Math.round((10 + v * .6) / SP);
+  for (let k = 0; k < fFern; k++) { const kk = Math.abs(LK[W(i + k)]); if (kk > kFern) kFern = kk; if (k < fNah && kk > kNah) kNah = kk; }
+  const vt = LV[W(i + 2)];
+  const e = wrapW(psiD - psiV);
+  let vMin = vt; for (let k = 0; k < fNah + 4; k++) vMin = Math.min(vMin, LV[W(i + k)]);
+  if (!K.drift && P.drift && kNah > 1 / P.rDrift && v > 9 && v < 42 && v < vMin + P.eintritt) { K.drift = true; K.hand = P.handZeit; }
+  else if (K.drift && (kFern < 1 / (P.rDrift * P.ausFaktor) || v < 8)) K.drift = false;
+  let rd;
+  if (K.drift) {
+    const wd = 2 * v * Math.sin(e) / Ld;                       // gewünschte Drehung der Fahrtrichtung (>0 links)
+    let bm = .5 * Math.asin(clamp(2 * Math.abs(wd) / P.gEff, 0, .98));
+    bm = clamp(bm * P.betaGain + clamp((v - vt) * P.kb, 0, .3), P.betaMin, P.betaMax);
+    const hd = psiV + Math.sign(wd || 1) * bm;
+    rd = -wd - P.khD * wrapW(hd - A.h);
+  } else {
+    const wd = 2 * v * Math.sin(e) / Ld;
+    const hd = psiV + P.kPsi * e;
+    rd = -P.kh * wrapW(hd - A.h) * (1 - P.ff) - wd * P.ff;
+  }
+  const lw = Math.atan(rd * RADSTAND / Math.max(Math.abs(A.vF), 3));
+  const lenk = clamp(lw * (1 + v / 30) / .6, -1, 1);
+  let gas, bremse = false, hand = false;
+  if (K.drift) {
+    gas = v < vt + P.driftUeber;
+    bremse = v > vt + P.driftUeber + P.bremsDrift;
+    if (K.hand > 0) { hand = true; K.hand -= DT; }
+  } else {
+    gas = v < vt;
+    bremse = v > vt + P.bm;
+  }
+  return { gas, bremse, hand, lenk, direkt: true };
+}
+const KI_STANDARD = {"rand":1.6,"aGrip":21,"aDrift":20,"rDrift":25,"bremsA":27,"l0":15,"l1":0.5,"vorausDrift":0.15,"drift":true,"kPsi":0.8,"kh":3,"ff":0,"bm":3,"handZeit":0.15,"eintritt":12,"kb":0,"gEff":2,"betaGain":1,"betaMin":0.3,"betaMax":0.6,"khD":20,"ausFaktor":3,"rv":2,"driftUeber":0,"bremsDrift":20};
+
+function vorlageAufnehmen(P, runden, beob) {
+  ideallinieBerechnen(P.rand); tempoprofil(P);
+  const A = neuesAuto(); aufStartSetzen(A);
+  const K = { drift: false, hand: 0 };
+  const FELDER = 22, frames = [];
+  const zeitBei = [];
+  const st = { wand: 0, wiese: 0, verloren: 0, runden: [], driftZeit: 0, punkte: 0 };
+  const ev = {
+    aufprall(a, s) { st.wand++; }, rundeLos() {}, rundeFertig(a, zt) { st.runden.push(zt); },
+    driftFertig() {}, driftWeg() { st.verloren++; }
+  };
+  let s = 0;
+  const maxS = 120 * 900 * runden;
+  while (A.runde <= runden && s < maxS) {
+    const e = kiEingabe(A, P, K);
+    physik(A, e, DT, ev);
+    if (beob) beob(A, e, K);
+    if (!A.aufStrasse) st.wiese++;
+    if (Math.abs(A.beta) > .2) st.driftZeit += DT;
+    if (A.fortschritt >= 0 && zeitBei[A.fortschritt] === undefined) zeitBei[A.fortschritt] = A.zeit;
+    if (s % 4 === 0) frames.push(A.x, A.y, A.z, A.h, A.pitch, A.roll, A.beta, A.v, A.vF, A.lenkWinkel, A.raddreh,
+      A.aufStrasse ? 1 : 0, A.bremst ? 1 : 0, A.rpm, A.gang, A.last, A.driftPunkte, A.mult, A.punkte, A.runde,
+      A.rundeAktiv ? A.zeit - A.rundeStart : 0, A.idx);
+    s++;
+  }
+  for (let i = 1; i < zeitBei.length; i++) if (zeitBei[i] === undefined) zeitBei[i] = zeitBei[i - 1];
+  st.punkte = A.punkte; st.beste = A.beste; st.zeit = A.zeit;
+  return { frames: Float32Array.from(frames), FELDER, fps: 30, zeitBei, st, beste: A.beste, besterDrift: A.besterDrift, runden, vmax: A.vmax, gesamt: A.zeit };
+}
+
+
+// ================================================================
+//  Speicher (Rekorde & Einstellungen)
+// ================================================================
+const SPEICHER = 'grueneHoelleDrift';
+let rekord = { runde: 0, drift: 0, punkte: 0, farbe: 0, modus: 'frei', runden: 1 };
+try { Object.assign(rekord, JSON.parse(localStorage.getItem(SPEICHER) || '{}')); } catch (e) {}
+function speichern() { try { localStorage.setItem(SPEICHER, JSON.stringify(rekord)); } catch (e) {} }
+const zahl = n => Math.round(n).toLocaleString('de-DE');
+function zeitText(s) {
+  if (!s) return '–';
+  const m = Math.floor(s / 60), r = s - m * 60;
+  return m + ':' + (r < 10 ? '0' : '') + r.toFixed(1);
+}
+
+// ================================================================
+//  Renderer, Szene, Licht
+// ================================================================
+THREE.ColorManagement.legacyMode = false;
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.6));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+$('welt').appendChild(renderer.domElement);
+const ANISO = renderer.capabilities.getMaxAnisotropy();
+
+const szene = new THREE.Scene();
+szene.fog = new THREE.Fog(new THREE.Color('#cfd3cc'), 400, 3200);
+const kamera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.3, 6000);
+
+const SONNE = new THREE.Vector3(0.55, 0.42, -0.72).normalize();
+szene.add(new THREE.HemisphereLight('#d6e6ff', '#4b5a33', 0.85));
+const sonne = new THREE.DirectionalLight('#fff0d6', 2.3);
+sonne.castShadow = true;
+sonne.shadow.mapSize.set(2048, 2048);
+Object.assign(sonne.shadow.camera, { left: -55, right: 55, top: 55, bottom: -55, near: 1, far: 420 });
+sonne.shadow.bias = -0.0006; sonne.shadow.normalBias = 0.04;
+szene.add(sonne, sonne.target);
+
+const himmel = new THREE.Mesh(new THREE.SphereGeometry(5000, 32, 16), new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, fog: false,
+  uniforms: { uSonne: { value: SONNE } },
+  vertexShader: `varying vec3 vR; void main(){ vR = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+  fragmentShader: `
+    uniform vec3 uSonne; varying vec3 vR;
+    float h(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+    float n(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+      return mix(mix(h(i),h(i+vec2(1,0)),f.x), mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x), f.y); }
+    float fbm(vec2 p){ float s=0., a=.5; for(int i=0;i<5;i++){ s+=a*n(p); p*=2.07; a*=.5; } return s; }
+    void main(){
+      vec3 d = normalize(vR); float y = d.y;
+      vec3 hor = vec3(.86,.85,.80), zen = vec3(.30,.52,.82);
+      vec3 c = mix(hor, zen, pow(clamp(y,0.,1.), .5));
+      if (y < 0.) c = mix(hor, vec3(.55,.6,.55), clamp(-y*5.,0.,1.));
+      float s = max(dot(d, uSonne), 0.);
+      c += vec3(1.,.82,.55) * pow(s, 10.) * .32 + vec3(1.,.96,.88) * pow(s, 1200.) * 3.;
+      if (y > .01) {
+        vec2 uv = d.xz / (y + .12) * 1.4;
+        float w = fbm(uv + vec2(3.1, 1.7));
+        float k = smoothstep(.48, .75, w) * smoothstep(.01, .22, y);
+        vec3 wc = mix(vec3(.80,.82,.86), vec3(1.,.98,.95), smoothstep(.5,.8,w) + s*.3);
+        c = mix(c, wc, k * .85);
+      }
+      gl_FragColor = vec4(c, 1.);
+    }`
+}));
+himmel.renderOrder = -1;
+szene.add(himmel);
+
+// ================================================================
+//  Texturen
+// ================================================================
+function leinwand(w, h, f) { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = ANISO; return t; }
+const asphalt = leinwand(256, 512, (g, w, h) => {
+  g.fillStyle = '#4a4c4f'; g.fillRect(0, 0, w, h);
+  const d = g.getImageData(0, 0, w, h);
+  for (let i = 0; i < d.data.length; i += 4) { const n = (Math.random() - .5) * 30; d.data[i] += n; d.data[i + 1] += n; d.data[i + 2] += n; }
+  g.putImageData(d, 0, 0);
+  for (let k = 0; k < 10; k++) { g.fillStyle = `rgba(20,20,22,${.08 + Math.random() * .12})`; g.fillRect(30 + Math.random() * 180, Math.random() * h, 20 + Math.random() * 60, 30 + Math.random() * 120); }
+  const gr = g.createLinearGradient(0, 0, w, 0);
+  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(.32, 'rgba(0,0,0,.16)'); gr.addColorStop(.68, 'rgba(0,0,0,.16)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#ecece4'; g.fillRect(5, 0, 7, h); g.fillRect(w - 12, 0, 7, h);
+});
+asphalt.wrapT = THREE.RepeatWrapping;
+const curbTex = leinwand(8, 32, (g) => { g.fillStyle = '#d42a22'; g.fillRect(0, 0, 8, 16); g.fillStyle = '#f2f2ee'; g.fillRect(0, 16, 8, 16); });
+curbTex.wrapT = THREE.RepeatWrapping; curbTex.magFilter = THREE.NearestFilter;
+const karoTex = leinwand(128, 16, (g) => { for (let x = 0; x < 16; x++) for (let y = 0; y < 2; y++) { g.fillStyle = (x + y) % 2 ? '#111' : '#f4f4f4'; g.fillRect(x * 8, y * 8, 8, 8); } });
+karoTex.magFilter = THREE.NearestFilter;
+function schildTex(text, gross) {
+  return leinwand(512, 128, (g, w, h) => {
+    g.fillStyle = gross ? '#0f1a0c' : '#1d4a27'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = gross ? '#b8ff3c' : '#f2f2ea'; g.lineWidth = 8; g.strokeRect(10, 10, w - 20, h - 20);
+    g.fillStyle = gross ? '#b8ff3c' : '#f2f2ea'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    let s = 64; do { g.font = `bold ${s}px "Russo One", Arial, sans-serif`; s -= 2; } while (g.measureText(text).width > w - 60);
+    g.fillText(text, w / 2, h / 2 + 3);
+  });
+}
+
+// ================================================================
+//  Strecke bauen
+// ================================================================
+const kantenH = (i, d) => py[i] + d * tb[i];
+function streifen(d0, d1, hoeheExtra, vSkala, nurWo) {
+  const pos = [], uv = [], idx = [];
+  const map = new Int32Array(N).fill(-1);
+  for (let i = 0; i < N; i++) {
+    if (nurWo && !nurWo(i)) continue;
+    map[i] = pos.length / 3 / 2;
+    for (const [d, u] of [[d0, 0], [d1, 1]]) {
+      pos.push(px[i] + sx[i] * d, kantenH(i, d) + hoeheExtra(d), pz[i] + sz[i] * d);
+      uv.push(u, dist[i] / vSkala);
+    }
+  }
+  for (let i = 0; i < N; i++) {
+    const j = W(i + 1); if (map[i] < 0 || map[j] < 0) continue;
+    const a = map[i] * 2, b = map[j] * 2;
+    if (j === 0) {
+      const n0 = pos.length / 3, vb = LAENGE / vSkala;
+      for (const [d, u] of [[d0, 0], [d1, 1]]) { pos.push(px[0] + sx[0] * d, kantenH(0, d) + hoeheExtra(d), pz[0] + sz[0] * d); uv.push(u, vb); }
+      idx.push(a, a + 1, n0, a + 1, n0 + 1, n0);
+    } else idx.push(a, a + 1, b, a + 1, b + 1, b);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+const strasse = new THREE.Mesh(streifen(-HB, HB, () => 0, 24), new THREE.MeshStandardMaterial({ map: asphalt, roughness: .88, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+strasse.receiveShadow = true; szene.add(strasse);
+const kurvig = i => { for (let k = -3; k <= 3; k++) if (Math.abs(kr[W(i + k)]) > 1 / 140) return true; return false; };
+const curbMat = new THREE.MeshStandardMaterial({ map: curbTex, roughness: .7, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+for (const [a, b] of [[-HB - 1.3, -HB], [HB, HB + 1.3]]) {
+  const m = new THREE.Mesh(streifen(a, b, d => Math.abs(d) > HB + .1 ? .02 : .05, 4, kurvig), curbMat);
+  m.receiveShadow = true; szene.add(m);
+}
+const randMat = new THREE.MeshLambertMaterial({ color: '#56702f', side: THREE.DoubleSide });
+for (const [a, b] of [[-HB - 1.4, -HB - .2], [HB + .2, HB + 1.4]]) szene.add(new THREE.Mesh(streifen(a, b, d => Math.abs(d) > HB + 1 ? -5 : -.02, 10), randMat));
+{
+  const g = new THREE.PlaneGeometry(B, 1.6); g.rotateX(-Math.PI / 2);
+  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: karoTex, roughness: .8, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
+  m.position.set(px[0], py[0] + .02, pz[0]); m.rotation.y = ausrichtung(0); m.receiveShadow = true; szene.add(m);
+}
+const plankenMat = new THREE.MeshStandardMaterial({ color: '#c3c8cc', metalness: .65, roughness: .38, side: THREE.DoubleSide });
+for (const s of [-1, 1]) {
+  const pos = [], idx = [];
+  for (let i = 0; i <= N; i++) {
+    const j = W(i), d = s * planke(j, s), x = px[j] + sx[j] * d, z = pz[j] + sz[j] * d;
+    const y = py[j] - .3 - Math.abs(tb[j]) * HB;
+    pos.push(x, y + .45, z, x, y + .95, z);
+    if (i < N) { const a = i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+  const m = new THREE.Mesh(g, plankenMat); m.castShadow = true; szene.add(m);
+}
+{
+  const anz = Math.floor(N / 2) * 2 + 4, pf = new THREE.InstancedMesh(new THREE.BoxGeometry(.12, 1, .12), new THREE.MeshLambertMaterial({ color: '#8d9297' }), anz);
+  const o = new THREE.Object3D(); let n = 0;
+  for (let i = 0; i < N; i += 2) for (const s of [-1, 1]) {
+    const d = s * (planke(i, s) + .15), y = py[i] - .3 - Math.abs(tb[i]) * HB;
+    o.position.set(px[i] + sx[i] * d, y + .4, pz[i] + sz[i] * d); o.updateMatrix(); pf.setMatrixAt(n++, o.matrix);
+  }
+  pf.count = n; szene.add(pf);
+}
+
+// Gelände: feine Kacheln entlang der Strecke (mit Schürzen), grobes Netz bis zum Horizont
+const geMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+const GE_FARBEN = { gras1: new THREE.Color('#5f7f33'), gras2: new THREE.Color('#3e5f25'), wald: new THREE.Color('#2d4420'), wiese: new THREE.Color('#6f8f3a'), fels: new THREE.Color('#7b7560') };
+const geC = new THREE.Color();
+function geFarbe(x, z, nah, fern) {
+  const n = fbm(x * .01, z * .01, 3), w = fbm(x * .004 + 11, z * .004 + 5, 3);
+  geC.copy(GE_FARBEN.gras1).lerp(GE_FARBEN.gras2, n).lerp(GE_FARBEN.wald, smooth(.45, .7, w) * .8);
+  if (nah) geC.lerp(GE_FARBEN.wiese, .55);
+  if (fern) geC.lerp(GE_FARBEN.fels, .3);
+  return geC;
+}
+const KG = 256, KS = 32, KACHELN = new Map();
+for (let i = 0; i < N; i += 15) {
+  for (let x = px[i] - 320; x <= px[i] + 320; x += 64) for (let z = pz[i] - 320; z <= pz[i] + 320; z += 64) {
+    if ((x - px[i]) ** 2 + (z - pz[i]) ** 2 > 320 * 320) continue;
+    const tx = Math.floor(x / KG), tz = Math.floor(z / KG); KACHELN.set(tx + ',' + tz, [tx, tz]);
+  }
+}
+// grobes Netz (unter den Kacheln abgesenkt)
+{
+  const x0 = BX0, z0 = BZ0, gx = (BNX - 1) * BG, gz = (BNZ - 1) * BG, seg = 128;
+  const nx = Math.ceil(gx / seg), nz = Math.ceil(gz / seg);
+  const g = new THREE.PlaneGeometry(nx * seg, nz * seg, nx, nz); g.rotateX(-Math.PI / 2);
+  const p = g.attributes.position, f = new Float32Array(p.count * 3), drin = new Uint8Array(p.count);
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i) + x0 + nx * seg / 2, z = p.getZ(i) + z0 + nz * seg / 2;
+    const unter = KACHELN.has(Math.floor(x / KG) + ',' + Math.floor(z / KG));
+    let h = basisH(x, z) - 3;
+    if (unter) {
+      drin[i] = 1;
+      // tiefer als jede Strecke in der Nähe, damit nichts durch die feinen Kacheln sticht
+      let rmin = 1e9; const cx = Math.floor(x / ZELLE), cz = Math.floor(z / ZELLE);
+      for (let a = -9; a <= 9; a++) for (let c = -9; c <= 9; c++) { const l = raster.get(zKey(cx + a, cz + c)); if (l) for (const j of l) if (py[j] < rmin) rmin = py[j]; }
+      h = Math.min(h - 6, rmin - 25);
+    }
+    p.setXYZ(i, x, h, z);
+    const c = geFarbe(x, z, false, true); f[i * 3] = c.r; f[i * 3 + 1] = c.g; f[i * 3 + 2] = c.b;
+  }
+  const alt = g.index.array, neu = [];
+  for (let k = 0; k < alt.length; k += 3) { if (!(drin[alt[k]] && drin[alt[k + 1]] && drin[alt[k + 2]])) neu.push(alt[k], alt[k + 1], alt[k + 2]); }
+  g.setIndex(neu);
+  g.setAttribute('color', new THREE.BufferAttribute(f, 3)); g.computeVertexNormals();
+  const m = new THREE.Mesh(g, geMat); m.receiveShadow = true; szene.add(m);
+}
+function baueKachel(tx, tz) {
+  const x0 = tx * KG, z0 = tz * KG, st = KG / KS, n = KS + 1;
+  const kand = [];
+  for (let cx = Math.floor((x0 - 160) / ZELLE); cx <= Math.floor((x0 + KG + 160) / ZELLE); cx++)
+    for (let cz = Math.floor((z0 - 160) / ZELLE); cz <= Math.floor((z0 + KG + 160) / ZELLE); cz++) { const l = raster.get(zKey(cx, cz)); if (l) for (const j of l) kand.push(j); }
+  const nv = n * n + 4 * n;
+  const pos = new Float32Array(nv * 3), col = new Float32Array(nv * 3), idx = [];
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const x = x0 + i * st, z = z0 + j * st, o = (j * n + i) * 3;
+    const h = kand.length ? bodenHListe(x, z, kand) : basisH(x, z);
+    pos[o] = x; pos[o + 1] = h; pos[o + 2] = z;
+    let nah = false;
+    if (kand.length) { for (let k = 0; k < kand.length; k += 2) { const q = kand[k]; if ((px[q] - x) ** 2 + (pz[q] - z) ** 2 < (PLANKE + 4) ** 2) { nah = true; break; } } }
+    const c = geFarbe(x, z, nah, false); col[o] = c.r; col[o + 1] = c.g; col[o + 2] = c.b;
+  }
+  for (let j = 0; j < KS; j++) for (let i = 0; i < KS; i++) { const a = j * n + i, b = a + 1, c = a + n, d = c + 1; idx.push(a, c, b, b, c, d); }
+  // Schürzen gegen Spalten
+  const rand = [[], [], [], []];
+  for (let k = 0; k < n; k++) { rand[0].push(k); rand[1].push((n - 1) * n + k); rand[2].push(k * n); rand[3].push(k * n + n - 1); }
+  let basis = n * n;
+  for (const r of rand) {
+    for (let k = 0; k < n; k++) {
+      const s = r[k] * 3, o = (basis + k) * 3;
+      pos[o] = pos[s]; pos[o + 1] = pos[s + 1] - 15; pos[o + 2] = pos[s + 2];
+      col[o] = col[s] * .7; col[o + 1] = col[s + 1] * .7; col[o + 2] = col[s + 2] * .7;
+      if (k < n - 1) idx.push(r[k], basis + k, r[k + 1], r[k + 1], basis + k, basis + k + 1);
+    }
+    basis += n;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.setIndex(idx); g.computeVertexNormals();
+  const m = new THREE.Mesh(g, geMat); m.receiveShadow = true; szene.add(m);
+}
+const KACHEL_LISTE = [...KACHELN.values()].sort((a, b) => ((a[0] + .5) * KG - px[0]) ** 2 + ((a[1] + .5) * KG - pz[0]) ** 2 - (((b[0] + .5) * KG - px[0]) ** 2 + ((b[1] + .5) * KG - pz[0]) ** 2));
+let kachelNr = 0;
+// Start-Umgebung sofort, den Rest nach und nach im Hintergrund
+while (kachelNr < KACHEL_LISTE.length && kachelNr < 40) { baueKachel(...KACHEL_LISTE[kachelNr++]); }
+function kachelnWeiter() {
+  const t0 = performance.now();
+  while (kachelNr < KACHEL_LISTE.length && performance.now() - t0 < 10) baueKachel(...KACHEL_LISTE[kachelNr++]);
+  if (kachelNr < KACHEL_LISTE.length) setTimeout(kachelnWeiter, 0);
+}
+setTimeout(kachelnWeiter, 200);
+
+// Bäume in Gruppen (je 1 km), damit unsichtbare Gruppen nicht gezeichnet werden
+{
+  const ZIEL = 16000, GRUPPE = 1000, gruppen = new Map();
+  const gruene = ['#24421f', '#2c4f24', '#1f3a1c', '#355a29', '#3d5f2a'];
+  let n = 0, versuch = 0;
+  while (n < ZIEL && versuch < 200000) {
+    versuch++;
+    const i = Math.floor(zufall() * N), s = zufall() < .5 ? -1 : 1, d = s * (PLANKE + 6 + Math.pow(zufall(), 1.6) * 300), vor = (zufall() - .5) * 20;
+    const x = px[i] + sx[i] * d + tx[i] * vor, z = pz[i] + sz[i] * d + tz[i] * vor;
+    const nb = naechsteProbe(x, z, 2);
+    if (nb && nb.d < PLANKE + 6 + (nahStart(nb.i) ? 34 : 0)) continue;
+    const w = fbm(x * .004 + 11, z * .004 + 5, 3);
+    if (zufall() > .25 + smooth(.36, .6, w) * .75) continue;
+    const key = Math.floor(x / GRUPPE) + ',' + Math.floor(z / GRUPPE);
+    let gr = gruppen.get(key); if (!gr) gruppen.set(key, gr = []);
+    gr.push([x, bodenH(x, z) - .3, z, .75 + zufall() * .7, zufall() * 6.3, .85 + zufall() * .4, gruene[Math.floor(zufall() * gruene.length)]]);
+    n++;
+  }
+  const kGeo = new THREE.ConeGeometry(2.6, 9, 7).translate(0, 7, 0), sGeo = new THREE.CylinderGeometry(.28, .4, 3, 5).translate(0, 1.5, 0);
+  const kMat = new THREE.MeshLambertMaterial({ color: '#ffffff' }), sMat = new THREE.MeshLambertMaterial({ color: '#4a3826' });
+  const o = new THREE.Object3D(), c = new THREE.Color();
+  for (const [key, liste] of gruppen) {
+    const [gx, gz] = key.split(',').map(Number);
+    const kugel = new THREE.Sphere(new THREE.Vector3((gx + .5) * GRUPPE, 0, (gz + .5) * GRUPPE), GRUPPE * .75 + 60);
+    let ys = 0; for (const t of liste) ys += t[1]; kugel.center.y = ys / liste.length;
+    const kg = kGeo.clone(), sg = sGeo.clone(); kg.boundingSphere = kugel; sg.boundingSphere = kugel.clone();
+    const krone = new THREE.InstancedMesh(kg, kMat, liste.length), stamm = new THREE.InstancedMesh(sg, sMat, liste.length);
+    liste.forEach((t, k) => {
+      o.position.set(t[0], t[1], t[2]); o.rotation.set(0, t[4], 0); o.scale.set(t[3], t[3] * t[5], t[3]); o.updateMatrix();
+      krone.setMatrixAt(k, o.matrix); stamm.setMatrixAt(k, o.matrix); c.set(t[6]); krone.setColorAt(k, c);
+    });
+    szene.add(krone, stamm);
+  }
+}
+// Portal, Tribüne, Schilder
+const AMPEL_LAMPEN = [];
+{
+  const gr = new THREE.Group();
+  gr.position.set(px[0], py[0], pz[0]); gr.rotation.y = ausrichtung(0);
+  const stahl = new THREE.MeshStandardMaterial({ color: '#2b2f33', metalness: .6, roughness: .4 });
+  for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(.5, 7, .5), stahl); p.position.set(s * (HB + 1.6), 3.5, 0); p.castShadow = true; gr.add(p); }
+  const balken = new THREE.Mesh(new THREE.BoxGeometry(B + 3.8, 1.6, .6), [stahl, stahl, stahl, stahl, new THREE.MeshBasicMaterial({ map: schildTex('GRÜNE HÖLLE', true) }), new THREE.MeshBasicMaterial({ map: schildTex('START · ZIEL', true) })]);
+  balken.position.y = 7.2; balken.castShadow = true; gr.add(balken);
+  const kasten = new THREE.Mesh(new THREE.BoxGeometry(5.6, 1.25, .4), stahl); kasten.position.set(0, 5.75, -.1); gr.add(kasten);
+  const lampeG = new THREE.CircleGeometry(.24, 20);
+  for (let k = 0; k < 5; k++) {
+    const mat = new THREE.MeshBasicMaterial({ color: '#2a0806' });
+    AMPEL_LAMPEN.push(mat);
+    for (const y of [5.48, 6.02]) { const l = new THREE.Mesh(lampeG, mat); l.position.set((k - 2) * 1.05, y, -.31); l.rotation.y = Math.PI; gr.add(l); }
+  }
+  szene.add(gr);
+  const tr = new THREE.Group(); tr.position.set(px[0], py[0] - .15, pz[0]); tr.rotation.y = ausrichtung(0);
+  const TS = PLL[0] >= PLR[0] ? 1 : -1;  // +1 = links
+  const beton = new THREE.MeshLambertMaterial({ color: '#9a9a92' });
+  const reihen = 8;
+  for (let k = 0; k < reihen; k++) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(1.8, .7 * (k + 1), 110), beton);
+    b.position.set(TS * (PLANKE + 4 + k * 1.8), .35 * (k + 1), 0); b.castShadow = k === reihen - 1; b.receiveShadow = true; tr.add(b);
+  }
+  const dach = new THREE.Mesh(new THREE.BoxGeometry(17, .4, 114), new THREE.MeshStandardMaterial({ color: '#d8dad6', roughness: .6 }));
+  dach.position.set(TS * (PLANKE + 10), 10, 0); dach.castShadow = true; tr.add(dach);
+  for (let z = -54; z <= 54; z += 27) { const st = new THREE.Mesh(new THREE.BoxGeometry(.4, 10, .4), beton); st.position.set(TS * (PLANKE + 18), 5, z); tr.add(st); }
+  const PERS = 1300, leute = new THREE.InstancedMesh(new THREE.BoxGeometry(.5, .9, .4), new THREE.MeshLambertMaterial({ color: '#fff' }), PERS);
+  const o = new THREE.Object3D(), c = new THREE.Color(), bunt = ['#e74c3c', '#f1c40f', '#3498db', '#ecf0f1', '#2ecc71', '#e67e22', '#9b59b6', '#1d1d1d', '#b8ff3c'];
+  for (let n = 0; n < PERS; n++) {
+    const k = Math.floor(zufall() * reihen);
+    o.position.set(TS * (PLANKE + 4 + k * 1.8) + (zufall() - .5) * .6, .7 * (k + 1) + .45, (zufall() - .5) * 106);
+    o.rotation.y = (zufall() - .5) * .6; o.updateMatrix(); leute.setMatrixAt(n, o.matrix);
+    c.set(bunt[Math.floor(zufall() * bunt.length)]); leute.setColorAt(n, c);
+  }
+  tr.add(leute);
+  const banner = new THREE.Mesh(new THREE.PlaneGeometry(40, 2.6), new THREE.MeshBasicMaterial({ map: schildTex('GRÜNE HÖLLE DRIFT', true) }));
+  banner.position.set(TS * (PLANKE + 3.2), 1.6, 0); banner.rotation.y = -TS * Math.PI / 2; tr.add(banner);
+  szene.add(tr);
+}
+for (const a of ABSCHNITTE) {
+  if (a.name.startsWith('Start')) continue;
+  const i = W(a.i - 20), sei = PLR[i] >= PLL[i] ? 1 : -1, d = sei * (planke(i, sei) + 2);
+  if (Math.abs(d) < HB + 5) continue;
+  const gr = new THREE.Group();
+  gr.position.set(px[i] + sx[i] * d, bodenH(px[i] + sx[i] * d, pz[i] + sz[i] * d), pz[i] + sz[i] * d); gr.rotation.y = ausrichtung(i) + Math.PI;
+  const tafel = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.5), new THREE.MeshBasicMaterial({ map: schildTex(a.name.toUpperCase()), side: THREE.DoubleSide }));
+  tafel.position.y = 2.6; gr.add(tafel);
+  for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(.12, 2.6, .12), new THREE.MeshLambertMaterial({ color: '#777' })); p.position.set(s * 2.4, 1.3, -.05); gr.add(p); }
+  szene.add(gr);
+}
+
+// ================================================================
+//  Autos (zwei eigene Designs)
+// ================================================================
+const FARBEN = ['#e8321f', '#f5c518', '#f2f2f0', '#1f6fe8', '#b8ff3c', '#7a3cff'];
+const lackSpieler = new THREE.MeshStandardMaterial({ color: FARBEN[rekord.farbe] || FARBEN[0], metalness: .45, roughness: .28 });
+function geistMat(m) { const k = m.clone(); k.transparent = true; k.opacity = .38; k.depthWrite = false; return k; }
+const GEIST_LACK = new THREE.MeshStandardMaterial({ color: '#b8ff3c', metalness: .3, roughness: .3, emissive: '#3c6a00', emissiveIntensity: .6 });
+
+function baueRad(r, b, mats, felge) {
+  const dreh = new THREE.Group();
+  const reifen = new THREE.Mesh(new THREE.CylinderGeometry(r, r, b, 26).rotateZ(Math.PI / 2), mats.gummi); reifen.castShadow = !mats.geist; dreh.add(reifen);
+  const fl = new THREE.Mesh(new THREE.CylinderGeometry(r * .62, r * .62, b + .01, 18).rotateZ(Math.PI / 2), mats.felge); dreh.add(fl);
+  const streifen = new THREE.Mesh(new THREE.TorusGeometry(r * .78, .012, 4, 28).rotateY(Math.PI / 2), felge); streifen.position.x = b / 2 + .002; dreh.add(streifen);
+  const s2 = streifen.clone(); s2.position.x = -b / 2 - .002; dreh.add(s2);
+  for (let k = 0; k < 5; k++) { const sp = new THREE.Mesh(new THREE.BoxGeometry(b + .02, r * 1.1, .04), mats.metall); sp.rotation.x = k * Math.PI / 5; dreh.add(sp); }
+  return dreh;
+}
+function materialSatz(lack, geist) {
+  const m = {
+    lack,
+    dunkel: new THREE.MeshStandardMaterial({ color: '#16181b', roughness: .55, metalness: .2 }),
+    carbon: new THREE.MeshStandardMaterial({ color: '#0d0e10', roughness: .35, metalness: .4 }),
+    weiss: new THREE.MeshStandardMaterial({ color: '#f4f4f0', roughness: .35 }),
+    gummi: new THREE.MeshStandardMaterial({ color: '#141414', roughness: .92 }),
+    felge: new THREE.MeshStandardMaterial({ color: '#2a2c30', metalness: .7, roughness: .35 }),
+    metall: new THREE.MeshStandardMaterial({ color: '#8d9196', metalness: .8, roughness: .3 }),
+    helm: new THREE.MeshStandardMaterial({ color: '#f5d21a', roughness: .25, metalness: .1 }),
+    visier: new THREE.MeshStandardMaterial({ color: '#111', roughness: .1, metalness: .6 }),
+    rueck: new THREE.MeshStandardMaterial({ color: '#400', emissive: '#ff1a10', emissiveIntensity: .7 }),
+    gelb: new THREE.MeshStandardMaterial({ color: '#f5d21a', roughness: .5 }),
+    geist
+  };
+  if (geist) for (const k of Object.keys(m)) if (m[k] && m[k].isMaterial) m[k] = geistMat(m[k]);
+  return m;
+}
+// Eigenes Formel-Auto (keine echte Team-Lackierung)
+function baueF1(mats) {
+  const gr = new THREE.Group(), karosse = new THREE.Group(); gr.add(karosse); gr.rotation.order = 'YXZ';
+  const schatten = o => { o.castShadow = !mats.geist; return o; };
+  // Monocoque (Seitenprofil, nach vorn spitz zulaufend)
+  const p = new THREE.Shape();
+  p.moveTo(-2.25, .2); p.lineTo(-2.3, .42); p.lineTo(-1.7, .62); p.lineTo(-.55, .82); p.lineTo(-.3, 1.08);
+  p.lineTo(-.05, 1.1); p.lineTo(.12, .8); p.lineTo(.62, .7); p.lineTo(1.3, .56); p.lineTo(2.2, .34); p.lineTo(2.62, .22);
+  p.lineTo(2.6, .14); p.lineTo(1.4, .14); p.lineTo(-2.25, .2);
+  const g = new THREE.ExtrudeGeometry(p, { depth: .56, bevelEnabled: true, bevelThickness: .08, bevelSize: .06, bevelSegments: 3, curveSegments: 6 });
+  g.translate(0, 0, -.28); g.rotateY(-Math.PI / 2);
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const z = pos.getZ(i), y = pos.getY(i);
+    let f = 1;
+    if (z > .9) f = 1 - .6 * Math.min(1, (z - .9) / 1.7);
+    if (z < -1.5) f = 1 - .45 * Math.min(1, (-1.5 - z) / .8);
+    if (y > .86) f *= .62;               // Airbox schmal
+    pos.setX(i, pos.getX(i) * f);
+  }
+  g.computeVertexNormals();
+  karosse.add(schatten(new THREE.Mesh(g, mats.lack)));
+  // Cockpit-Öffnung
+  const cock = new THREE.Mesh(new THREE.BoxGeometry(.5, .06, .78), mats.carbon); cock.position.set(0, .79, .3); karosse.add(cock);
+  // Fahrer
+  const helm = new THREE.Mesh(new THREE.SphereGeometry(.17, 18, 12), mats.helm); helm.position.set(0, .87, .12); karosse.add(helm);
+  const vis = new THREE.Mesh(new THREE.SphereGeometry(.172, 18, 8, -Math.PI * .35, Math.PI * .7, Math.PI * .38, Math.PI * .22), mats.visier); vis.position.copy(helm.position); karosse.add(vis);
+  // Airbox-Öffnung
+  const air = new THREE.Mesh(new THREE.BoxGeometry(.2, .16, .05), mats.carbon); air.position.set(0, .98, -.31); karosse.add(air);
+  // Halo
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(.36, .035, 8, 24, Math.PI), mats.carbon);
+  halo.rotation.x = -Math.PI / 2; halo.position.set(0, 1.0, .12); halo.scale.set(1, 1.15, 1); karosse.add(halo);
+  const steg = new THREE.Mesh(new THREE.CylinderGeometry(.03, .035, .42, 8), mats.carbon); steg.position.set(0, .87, .62); steg.rotation.x = .75; karosse.add(steg);
+  // Seitenkästen
+  for (const s of [-1, 1]) {
+    const sp = new THREE.Shape(); sp.moveTo(-1.35, .16); sp.lineTo(-1.25, .4); sp.lineTo(.2, .62); sp.lineTo(.75, .6); sp.lineTo(.8, .2); sp.lineTo(-1.35, .16);
+    const sg = new THREE.ExtrudeGeometry(sp, { depth: .4, bevelEnabled: true, bevelThickness: .05, bevelSize: .05, bevelSegments: 2 });
+    sg.translate(0, 0, -.2); sg.rotateY(-Math.PI / 2);
+    const sm = schatten(new THREE.Mesh(sg, mats.lack)); sm.position.x = s * .52; karosse.add(sm);
+    const ein = new THREE.Mesh(new THREE.BoxGeometry(.36, .26, .04), mats.carbon); ein.position.set(s * .52, .44, .84); karosse.add(ein);
+    const spiegel = new THREE.Mesh(new THREE.BoxGeometry(.16, .07, .05), mats.lack); spiegel.position.set(s * .42, .92, .55); karosse.add(spiegel);
+  }
+  // Boden
+  const boden = new THREE.Mesh(new THREE.BoxGeometry(1.42, .04, 3.3), mats.carbon); boden.position.set(0, .1, -.25); karosse.add(boden);
+  // Frontflügel
+  const fw = new THREE.Group(); fw.position.set(0, .12, 2.42); karosse.add(fw);
+  fw.add(schatten(new THREE.Mesh(new THREE.BoxGeometry(1.9, .035, .34), mats.carbon)));
+  for (const [y, z, r] of [[.06, -.08, -.25], [.12, -.16, -.45]]) { const f = new THREE.Mesh(new THREE.BoxGeometry(1.86, .025, .18), mats.lack); f.position.set(0, y, z); f.rotation.x = r; fw.add(f); }
+  for (const s of [-1, 1]) { const ep = new THREE.Mesh(new THREE.BoxGeometry(.03, .24, .5), mats.lack); ep.position.set(s * .95, .08, -.05); fw.add(ep); }
+  // Heckflügel
+  const hw = new THREE.Group(); hw.position.set(0, .95, -2.25); karosse.add(hw);
+  const blatt1 = schatten(new THREE.Mesh(new THREE.BoxGeometry(1.0, .04, .3), mats.carbon)); blatt1.rotation.x = .12; hw.add(blatt1);
+  const blatt2 = new THREE.Mesh(new THREE.BoxGeometry(1.0, .03, .18), mats.lack); blatt2.position.set(0, .14, -.12); blatt2.rotation.x = .5; hw.add(blatt2);
+  for (const s of [-1, 1]) { const ep = new THREE.Mesh(new THREE.BoxGeometry(.03, .62, .62), mats.lack); ep.position.set(s * .51, -.12, -.02); hw.add(ep); }
+  const pyl = new THREE.Mesh(new THREE.BoxGeometry(.05, .5, .12), mats.carbon); pyl.position.set(0, -.28, .08); hw.add(pyl);
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(.9, .03, .2), mats.carbon); beam.position.set(0, -.62, -.02); hw.add(beam);
+  // Haifischflosse & Streifen
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(.02, .22, 1.1), mats.lack); fin.position.set(0, .86, -1.0); fin.rotation.x = -.18; karosse.add(fin);
+  const nase = new THREE.Mesh(new THREE.BoxGeometry(.08, .012, 1.2), mats.weiss); nase.position.set(0, .48, 1.75); nase.rotation.x = .2; karosse.add(nase);
+  // Regenlicht
+  const rl = new THREE.Mesh(new THREE.BoxGeometry(.14, .07, .03), mats.rueck); rl.position.set(0, .42, -2.36); karosse.add(rl);
+  // Räder mit Aufhängung
+  const raeder = [];
+  for (const [x, z, vorn, r, b] of [[.82, 1.75, 1, .34, .32], [-.82, 1.75, 1, .34, .32], [.8, -1.55, 0, .36, .4], [-.8, -1.55, 0, .36, .4]]) {
+    const lenk = new THREE.Group(); lenk.position.set(x, r, z);
+    const dreh = baueRad(r, b, mats, vorn ? mats.gelb : mats.weiss); lenk.add(dreh);
+    gr.add(lenk); raeder.push({ lenk, dreh, vorn });
+    for (const dy of [-.06, .08]) {
+      const innen = new THREE.Vector3(Math.sign(x) * .3, r + dy + .08, z + (vorn ? -.1 : .1)), aussen = new THREE.Vector3(x - Math.sign(x) * b / 2, r + dy, z);
+      const len = innen.distanceTo(aussen);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, len, 5), mats.carbon);
+      arm.position.copy(innen).add(aussen).multiplyScalar(.5);
+      arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), aussen.clone().sub(innen).normalize());
+      gr.add(arm);
+    }
+  }
+  return { gr, karosse, raeder, mats };
+}
+const autos = {
+  spieler: { f1: baueF1(materialSatz(lackSpieler, false)) },
+  geist: { f1: baueF1(materialSatz(GEIST_LACK.clone(), true)) }
+};
+autos.ich = { f1: baueF1(materialSatz(new THREE.MeshStandardMaterial({ color: '#3cd8ff', metalness: .3, roughness: .3, emissive: '#00506a', emissiveIntensity: .6, transparent: true, opacity: .45, depthWrite: false }), true)) };
+autos.ich.f1.gr.visible = false; autos.ich.f1.rollVis = 0; autos.ich.f1.pitchVis = 0; szene.add(autos.ich.f1.gr);
+autos.geist.f1.mats.lack.transparent = true; autos.geist.f1.mats.lack.opacity = .45; autos.geist.f1.mats.lack.depthWrite = false;
+for (const a of [autos.spieler.f1, autos.geist.f1]) { a.gr.visible = false; a.rollVis = 0; a.pitchVis = 0; szene.add(a.gr); }
+
+// ================================================================
+//  Partikel: Rauch / Staub / Funken, Bremsspuren
+// ================================================================
+function partikelSystem(max, additiv) {
+  const g = new THREE.BufferGeometry();
+  const pos = new Float32Array(max * 3), gr = new Float32Array(max), al = new Float32Array(max), fa = new Float32Array(max * 3);
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('aGroesse', new THREE.BufferAttribute(gr, 1));
+  g.setAttribute('aAlpha', new THREE.BufferAttribute(al, 1));
+  g.setAttribute('aFarbe', new THREE.BufferAttribute(fa, 3));
+  const m = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: additiv ? THREE.AdditiveBlending : THREE.NormalBlending,
+    uniforms: { uSkala: { value: innerHeight * .9 * renderer.getPixelRatio() } },
+    vertexShader: `attribute float aGroesse; attribute float aAlpha; attribute vec3 aFarbe; uniform float uSkala; varying float vA; varying vec3 vF;
+      void main(){ vA=aAlpha; vF=aFarbe; vec4 mv=modelViewMatrix*vec4(position,1.); gl_PointSize = aGroesse*uSkala/max(-mv.z,.5); gl_Position=projectionMatrix*mv; }`,
+    fragmentShader: `varying float vA; varying vec3 vF; void main(){ vec2 c=gl_PointCoord-.5; float d=length(c); if(d>.5) discard; float a = smoothstep(.5,.0,d); gl_FragColor=vec4(vF, a*a*vA); }`
+  });
+  const pts = new THREE.Points(g, m); pts.frustumCulled = false; szene.add(pts);
+  const ts = []; for (let i = 0; i < max; i++) ts.push({ leben: 0, max: 1, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, g0: 1, g1: 1, a: 1, r: 1, gg: 1, b: 1, schwer: 0 });
+  let next = 0;
+  return {
+    mat: m,
+    neu(o) { const t = ts[next]; next = (next + 1) % max; Object.assign(t, o); t.leben = t.max; },
+    leeren() { for (const t of ts) t.leben = 0; },
+    update(dt) {
+      for (let i = 0; i < max; i++) {
+        const t = ts[i];
+        if (t.leben <= 0) { al[i] = 0; continue; }
+        t.leben -= dt;
+        const k = 1 - t.leben / t.max;
+        t.vy -= t.schwer * dt;
+        const dmp = Math.exp(-1.6 * dt); t.vx *= dmp; t.vz *= dmp;
+        t.x += t.vx * dt; t.y += t.vy * dt; t.z += t.vz * dt;
+        pos[i * 3] = t.x; pos[i * 3 + 1] = t.y; pos[i * 3 + 2] = t.z;
+        gr[i] = t.g0 + (t.g1 - t.g0) * k;
+        al[i] = t.a * Math.sin(Math.min(k * 6, 1) * Math.PI / 2) * (1 - k) ** 1.4;
+        fa[i * 3] = t.r; fa[i * 3 + 1] = t.gg; fa[i * 3 + 2] = t.b;
+      }
+      g.attributes.position.needsUpdate = g.attributes.aGroesse.needsUpdate = g.attributes.aAlpha.needsUpdate = g.attributes.aFarbe.needsUpdate = true;
+    }
+  };
+}
+const rauch = partikelSystem(1200, false);
+const funken = partikelSystem(260, true);
+
+const SPUR_MAX = 6000;
+const spurPos = new Float32Array(SPUR_MAX * 4 * 3);
+const spurGeo = new THREE.BufferGeometry();
+spurGeo.setAttribute('position', new THREE.BufferAttribute(spurPos, 3));
+{ const idx = new Uint32Array(SPUR_MAX * 6); for (let i = 0; i < SPUR_MAX; i++) { const a = i * 4; idx.set([a, a + 1, a + 2, a + 2, a + 1, a + 3], i * 6); } spurGeo.setIndex(new THREE.BufferAttribute(idx, 1)); }
+const spurMesh = new THREE.Mesh(spurGeo, new THREE.MeshBasicMaterial({ color: '#0a0a0a', transparent: true, opacity: .5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6, side: THREE.DoubleSide }));
+spurMesh.frustumCulled = false; szene.add(spurMesh);
+let spurNext = 0, spurDirtyMin = 1e9, spurDirtyMax = -1;
+function spurHochladen() {
+  if (spurDirtyMax < 0) return;
+  const a = spurGeo.attributes.position;
+  a.updateRange.offset = spurDirtyMin * 12; a.updateRange.count = (spurDirtyMax - spurDirtyMin + 1) * 12; a.needsUpdate = true;
+  spurDirtyMin = 1e9; spurDirtyMax = -1;
+}
+function spurSegment(letzte, w, x, y, z, qx, qz) {
+  const l = letzte[w], b = .13;
+  const neu = [x - qx * b, y, z - qz * b, x + qx * b, y, z + qz * b];
+  if (l && (l[0] - neu[0]) ** 2 + (l[2] - neu[2]) ** 2 < 36) {
+    const o = spurNext * 12;
+    spurPos.set(l, o); spurPos.set(neu, o + 6);
+    spurDirtyMin = Math.min(spurDirtyMin, spurNext); spurDirtyMax = Math.max(spurDirtyMax, spurNext);
+    spurNext = (spurNext + 1) % SPUR_MAX;
+  }
+  letzte[w] = neu;
+}
+function spurenLeeren() { spurPos.fill(0); spurDirtyMin = 0; spurDirtyMax = SPUR_MAX - 1; }
+
+// ================================================================
+//  Ton
+// ================================================================
+let ac = null, tonAn = rekord.ton !== false, master, motor1, motor2, motorFilter, motorGain, quiFilter, quiGain, rauschBuf;
+function audioStart() {
+  if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+  try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; return; }
+  master = ac.createGain(); master.gain.value = tonAn ? .55 : 0; master.connect(ac.destination);
+  motorFilter = ac.createBiquadFilter(); motorFilter.type = 'lowpass'; motorFilter.frequency.value = 700; motorFilter.Q.value = 3;
+  motorGain = ac.createGain(); motorGain.gain.value = 0;
+  motor1 = ac.createOscillator(); motor1.type = 'sawtooth';
+  motor2 = ac.createOscillator(); motor2.type = 'square';
+  const g2 = ac.createGain(); g2.gain.value = .4;
+  motor1.connect(motorFilter); motor2.connect(g2); g2.connect(motorFilter);
+  motorFilter.connect(motorGain); motorGain.connect(master);
+  motor1.start(); motor2.start();
+  const len = ac.sampleRate * 2; rauschBuf = ac.createBuffer(1, len, ac.sampleRate);
+  const d = rauschBuf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src = ac.createBufferSource(); src.buffer = rauschBuf; src.loop = true;
+  quiFilter = ac.createBiquadFilter(); quiFilter.type = 'bandpass'; quiFilter.frequency.value = 1700; quiFilter.Q.value = 7;
+  quiGain = ac.createGain(); quiGain.gain.value = 0;
+  src.connect(quiFilter); quiFilter.connect(quiGain); quiGain.connect(master); src.start();
+}
+function tonSetzen(an) {
+  tonAn = an; rekord.ton = an; speichern();
+  $('tonKnopf').textContent = $('tonKnopf2').textContent = 'TON: ' + (an ? 'AN' : 'AUS');
+  if (master) master.gain.setTargetAtTime(an ? .55 : 0, ac.currentTime, .05);
+}
+function audioUpdate(rpm, last, qui, aktiv) {
+  if (!ac) return;
+  const t = ac.currentTime;
+  motor1.frequency.setTargetAtTime(rpm / 30, t, .03);
+  motor2.frequency.setTargetAtTime(rpm / 60, t, .03);
+  motorFilter.frequency.setTargetAtTime(380 + last * 1500 + rpm * .12, t, .05);
+  motorGain.gain.setTargetAtTime(aktiv ? .09 + last * .1 : 0, t, .08);
+  quiGain.gain.setTargetAtTime(aktiv ? qui * .22 : 0, t, .05);
+  quiFilter.frequency.setTargetAtTime(1500 + Math.random() * 500, t, .02);
+}
+function knall(staerke) {
+  if (!ac || !tonAn) return;
+  const s = ac.createBufferSource(); s.buffer = rauschBuf;
+  const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900;
+  const g = ac.createGain(); const t = ac.currentTime;
+  g.gain.setValueAtTime(Math.min(.9, .25 + staerke * .03), t); g.gain.exponentialRampToValueAtTime(.001, t + .45);
+  s.connect(f); f.connect(g); g.connect(master); s.start(t, Math.random()); s.stop(t + .5);
+}
+function pling() {
+  if (!ac || !tonAn) return;
+  const t = ac.currentTime;
+  [660, 990].forEach((f, k) => {
+    const o = ac.createOscillator(), g = ac.createGain(); o.type = 'triangle'; o.frequency.value = f;
+    g.gain.setValueAtTime(0, t + k * .08); g.gain.linearRampToValueAtTime(.18, t + k * .08 + .01); g.gain.exponentialRampToValueAtTime(.001, t + k * .08 + .35);
+    o.connect(g); g.connect(master); o.start(t + k * .08); o.stop(t + k * .08 + .4);
+  });
+}
+
+// ================================================================
+//  Spielzustand
+// ================================================================
+const spieler = neuesAuto();
+const S = { runden: rekord.runden ?? 1, ampel: 0, ampelAus: 0, ampelAktiv: false, zustand: 'laden', modus: rekord.modus || 'frei', modell: 'f1', abschnitt: '', schuetteln: 0, kamera: 0, geistZeit: 0 };
+let VORLAGE = null;
+// Wiedergabe-Zustand der Vorlage (gleiche Felder wie ein Auto)
+const G = neuesAuto(); G.sichtbar = false; G.rundeZeit = 0; G.letztePunkte = 0;
+const GEIST_KI = G;
+// Dein eigener Geist: beste Runde, gespeichert im Browser
+const GI = neuesAuto(); GI.sichtbar = false;
+const GEIST_KEY = 'grueneHoelleGeist';
+let MEIN_GEIST = null;
+const AUFN_FPS = 15, AUFN_F = 16;
+function b64aus(f32) { const u = new Uint8Array(f32.buffer); let s = ''; for (let i = 0; i < u.length; i += 32768) s += String.fromCharCode.apply(null, u.subarray(i, i + 32768)); return btoa(s); }
+function b64ein(t) { const s = atob(t), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return new Float32Array(u.buffer); }
+try {
+  const roh = JSON.parse(localStorage.getItem(GEIST_KEY) || 'null');
+  if (roh && roh.n === N) MEIN_GEIST = { frames: b64ein(roh.f), zeitBei: b64ein(roh.z), FELDER: AUFN_F, fps: AUFN_FPS, zeit: roh.zeit };
+} catch (e) { MEIN_GEIST = null; }
+let aufnahme = null;
+function aufnahmeStart() { aufnahme = { frames: [], next: 0, zeitBei: new Float32Array(N + 1).fill(-1) }; }
+function aufnahmeSchritt() {
+  if (!aufnahme || !spieler.rundeAktiv) return;
+  const t = spieler.zeit - spieler.rundeStart, A = spieler;
+  while (aufnahme.next <= t) {
+    aufnahme.frames.push(A.x, A.y, A.z, A.h, A.pitch, A.roll, A.beta, A.v, A.vF, A.lenkWinkel, A.raddreh, A.aufStrasse ? 1 : 0, A.bremst ? 1 : 0, A.rpm, A.gang, A.last);
+    aufnahme.next += 1 / AUFN_FPS;
+  }
+  const rel = W(A.idx);
+  if (aufnahme.zeitBei[rel] < 0 && rel < N - 60) aufnahme.zeitBei[rel] = t;
+}
+function aufnahmeFertig(zt) {
+  if (!aufnahme || aufnahme.frames.length < AUFN_F * 20) return false;
+  if (MEIN_GEIST && zt >= MEIN_GEIST.zeit) return false;
+  const zb = aufnahme.zeitBei; let last = 0;
+  for (let i = 0; i <= N; i++) { if (zb[i] < 0) zb[i] = last; else last = zb[i]; }
+  MEIN_GEIST = { frames: Float32Array.from(aufnahme.frames), zeitBei: zb, FELDER: AUFN_F, fps: AUFN_FPS, zeit: zt };
+  try { localStorage.setItem(GEIST_KEY, JSON.stringify({ n: N, zeit: zt, f: b64aus(MEIN_GEIST.frames), z: b64aus(zb) })); } catch (e) {}
+  return true;
+}
+const FE = ['x', 'y', 'z', 'h', 'pitch', 'roll', 'beta', 'v', 'vF', 'lenkWinkel', 'raddreh', 'aufStrasse', 'bremst', 'rpm', 'gang', 'last', 'driftPunkte', 'mult', 'punkte', 'runde', 'rundeZeit', 'idx'];
+const WINKEL = { h: 1 };
+function geistSetzen(t, V = VORLAGE, G = GEIST_KI) {
+  const F = V.FELDER, n = V.frames.length / F;
+  const f = t * V.fps;
+  if (f >= n - 1) { G.sichtbar = false; return false; }
+  const a = Math.floor(f), k = f - a, o0 = a * F, o1 = (a + 1) * F;
+  for (let j = 0; j < F; j++) {
+    const v0 = V.frames[o0 + j], v1 = V.frames[o1 + j], name = FE[j];
+    if (j <= 10) G[name] = WINKEL[name] ? v0 + wrapW(v1 - v0) * k : v0 + (v1 - v0) * k;
+    else G[name] = v0;
+  }
+  G.aufStrasse = G.aufStrasse > .5; G.bremst = G.bremst > .5; G.idx = Math.round(G.idx);
+  const vR = Math.tan(G.beta) * Math.max(Math.abs(G.vF), 1);
+  const fx = Math.sin(G.h), fz = Math.cos(G.h);
+  G.vx = fx * G.vF - fz * vR; G.vz = fz * G.vF + fx * vR;
+  G.r = Math.tan(G.lenkWinkel) * G.vF / RADSTAND;
+  G.quietsch = G.aufStrasse ? clamp((Math.abs(G.beta) - .1) * 2.5, 0, 1) * clamp(G.v / 12, 0, 1) : 0;
+  G.sichtbar = true;
+  return true;
+}
+
+// Ereignisse des Spielers
+const EV = {
+  aufprall(A, staerke, s) {
+    S.schuetteln = Math.min(1, staerke / 14);
+    knall(staerke);
+    const fx = Math.sin(A.h), fz = Math.cos(A.h), bx = A.x + sx[A.idx] * s, bz = A.z + sz[A.idx] * s;
+    for (let k = 0; k < Math.min(40, staerke * 3); k++) {
+      funken.neu({ max: .4 + Math.random() * .4, x: bx + fx * (Math.random() - .5) * 3, y: A.y + .6, z: bz + fz * (Math.random() - .5) * 3,
+        vx: A.vx * .5 + (Math.random() - .5) * 8, vy: 2 + Math.random() * 5, vz: A.vz * .5 + (Math.random() - .5) * 8,
+        g0: .25, g1: .05, a: 1, r: 1, gg: .7, b: .3, schwer: 14 });
+    }
+  },
+  rundeLos() { meldung('RUNDE 1', 'Zeitnahme läuft', 'gut'); aufnahmeStart(); },
+  rundeFertig(A, zt, neu) {
+    const neuerGeist = aufnahmeFertig(zt); aufnahmeStart();
+    let rek = false;
+    if (!rekord.runde || zt < rekord.runde) { rekord.runde = zt; rek = true; speichern(); }
+    let unter = rek ? 'NEUE BESTZEIT' : 'RUNDE ' + (A.runde - 1);
+    if (S.modus === 'rennen' && VORLAGE) { const d = zt - VORLAGE.beste; unter += ' · ' + (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + ' s zur Vorlage'; }
+    if (neuerGeist) unter += ' · dein Geist fährt jetzt diese Runde';
+    meldung(zeitText(zt), unter, 'gut'); pling();
+  },
+  driftFertig(A, p) {
+    let titel = 'GUTER DRIFT';
+    if (p > 12000) titel = 'GRÜNE HÖLLE!'; else if (p > 6000) titel = 'WAHNSINN!'; else if (p > 2500) titel = 'STARKER DRIFT';
+    const neu = p > (rekord.drift || 0);
+    if (neu) rekord.drift = p;
+    if (A.punkte > (rekord.punkte || 0)) rekord.punkte = A.punkte;
+    speichern();
+    if (p >= 150) { meldung('+' + zahl(p), neu && p > 800 ? 'NEUER DRIFT-REKORD' : titel, 'gut'); pling(); }
+  },
+  driftWeg(A, text, p) { meldung(text, '−' + zahl(p) + ' Punkte verloren', 'schlecht'); }
+};
+
+const tasten = {}, touch = { gas: false, bremse: false, links: false, rechts: false, hand: false };
+function eingabe() {
+  return {
+    gas: !!(tasten.KeyW || tasten.ArrowUp || touch.gas),
+    bremse: !!(tasten.KeyS || tasten.ArrowDown || touch.bremse),
+    hand: !!(tasten.Space || touch.hand),
+    lenk: ((tasten.KeyD || tasten.ArrowRight || touch.rechts) ? 1 : 0) - ((tasten.KeyA || tasten.ArrowLeft || touch.links) ? 1 : 0)
+  };
+}
+function zuruecksetzen() {
+  if (S.zustand !== 'fahren' || S.modus === 'zuschauen') return;
+  const A = spieler, i = A.idx;
+  A.x = px[i]; A.z = pz[i]; A.h = ausrichtung(i); A.vx = A.vz = A.r = 0;
+  if (A.driftPunkte > 0) { EV.driftWeg(A, 'ZURÜCKGESETZT', A.driftPunkte); driftReset(A); }
+  spurenSpieler[0] = spurenSpieler[1] = null;
+}
+
+// ================================================================
+//  Effekte je Auto
+// ================================================================
+const spurenSpieler = [null, null], spurenGeist = [null, null], spurenIch = [null, null];
+function effekte(A, spuren, dt, gas, hand, staerke) {
+  const fx = Math.sin(A.h), fz = Math.cos(A.h), ab = Math.abs(A.beta);
+  const qx = fz, qz = -fx;
+  const quietschend = A.aufStrasse && ab > .18 && A.v > 6;
+  const wiese = !A.aufStrasse && A.v > 5;
+  const durchdrehen = gas && A.v < 4 && A.aufStrasse;
+  const welt = (lx, lz) => [A.x + fz * lx + fx * lz, A.z - fx * lx + fz * lz];
+  for (let w = 0; w < 2; w++) {
+    const [x, z] = welt(w ? -.8 : .8, -1.55);
+    if (quietschend || (hand && A.v > 4 && A.aufStrasse)) spurSegment(spuren, w, x, A.y + .025, z, qx, qz);
+    else spuren[w] = null;
+  }
+  const rate = (quietschend ? 40 + A.v * 3.5 * Math.min(1, ab * 2) : wiese ? 25 + A.v : durchdrehen ? 9 : 0) * staerke;
+  A._rauch = (A._rauch || 0) + rate * dt;
+  while (A._rauch >= 1) {
+    A._rauch -= 1;
+    const w = Math.random() < .5 ? .8 : -.8;
+    const [x, z] = welt(w, -1.6);
+    if (wiese) rauch.neu({ max: 1 + Math.random(), x, y: A.y + .3, z, vx: A.vx * .3 + (Math.random() - .5) * 2, vy: 1 + Math.random(), vz: A.vz * .3 + (Math.random() - .5) * 2, g0: .8, g1: 4, a: .45, r: .48, gg: .40, b: .28, schwer: .5 });
+    else rauch.neu({ max: 1.6 + Math.random() * 1.4, x, y: A.y + .3, z, vx: A.vx * .25 + (Math.random() - .5) * 2.5, vy: .6 + Math.random() * 1.2, vz: A.vz * .25 + (Math.random() - .5) * 2.5, g0: .9, g1: 6.5 + Math.random() * 3, a: .5, r: .93, gg: .93, b: .92, schwer: -.15 });
+  }
+}
+
+// ================================================================
+//  Kamera
+// ================================================================
+let kamWinkel = 0, kamHoehe = 0, kamFov = 62, tvKam = -1, kamNameT = 0;
+const TV_KAMERAS = [];
+for (let i = 0; i < N; i += 55) {
+  const s = PLR[i] >= PLL[i] ? 1 : -1, d = s * (planke(i, s) + 4 + (i % 3) * 3);
+  const x = px[i] + sx[i] * d, z = pz[i] + sz[i] * d;
+  TV_KAMERAS.push({ i, x, z, y: Math.max(bodenH(x, z), py[i]) + 3 + (i % 4) });
+}
+const KAM_NAMEN = { fahren: ['VERFOLGER', 'WEIT', 'COCKPIT'], zuschauen: ['VERFOLGER', 'HUBSCHRAUBER', 'TV-KAMERAS', 'COCKPIT'] };
+function kameraWechseln() {
+  if (S.zustand !== 'fahren') return;
+  const namen = KAM_NAMEN[S.modus === 'zuschauen' ? 'zuschauen' : 'fahren'];
+  S.kamera = (S.kamera + 1) % namen.length;
+  $('kamName').textContent = 'KAMERA: ' + namen[S.kamera]; $('kamName').classList.add('an'); kamNameT = 1.6;
+}
+function kameraUpdate(F, dt) {
+  const fx = Math.sin(F.h), fz = Math.cos(F.h);
+  if (S.zustand === 'menue' || S.zustand === 'ziel') {
+    const t = performance.now() / 1000 * .08;
+    kamera.position.set(F.x + Math.sin(t) * 13, F.y + 3.2, F.z + Math.cos(t) * 13);
+    kamera.lookAt(F.x, F.y + .9, F.z);
+    kamera.fov = 62; kamera.updateProjectionMatrix();
+    return;
+  }
+  const namen = KAM_NAMEN[S.modus === 'zuschauen' ? 'zuschauen' : 'fahren'];
+  const name = namen[S.kamera % namen.length];
+  let zfov = 60 + Math.min(F.v, 70) * .2;
+  if (name === 'COCKPIT') {
+    const hy = 1.18, hv = -.05;
+    kamera.position.set(F.x + fx * hv, F.y + hy, F.z + fz * hv);
+    kamera.lookAt(F.x + fx * 20, F.y + hy - .2 + Math.tan(F.pitch) * 20, F.z + fz * 20);
+  } else if (name === 'TV-KAMERAS') {
+    // nächste Kamera voraus wählen
+    let best = -1, bd = 1e9;
+    for (let k = 0; k < TV_KAMERAS.length; k++) { let d = TV_KAMERAS[k].i - F.idx; if (d < -N / 2) d += N; if (d > N / 2) d -= N; if (d > -20 && d < bd) { bd = d; best = k; } }
+    if (tvKam < 0 || best !== tvKam) { let dAlt = tvKam >= 0 ? TV_KAMERAS[tvKam].i - F.idx : -999; if (dAlt < -N / 2) dAlt += N; if (dAlt > N / 2) dAlt -= N; if (dAlt < -18 || tvKam < 0) tvKam = best; }
+    const c = TV_KAMERAS[tvKam];
+    kamera.position.set(c.x, c.y, c.z);
+    kamera.lookAt(F.x, F.y + .8, F.z);
+    const ab = Math.hypot(c.x - F.x, c.z - F.z);
+    zfov = clamp(2 * Math.atan(9 / Math.max(ab, 1)) * 57.3, 12, 70);
+  } else {
+    const velW = F.v > 3 ? Math.atan2(F.vx, F.vz) : F.h;
+    const ziel = F.h + wrapW(velW - F.h) * .5;
+    kamWinkel += wrapW(ziel - kamWinkel) * Math.min(1, dt * 4.5);
+    const fern = name === 'WEIT', heli = name === 'HUBSCHRAUBER';
+    const abst = heli ? 26 : (fern ? 10.5 : 7) + Math.min(F.v, 60) * .025, hoehe = heli ? 16 : fern ? 4.2 : 2.5;
+    const cx = F.x - Math.sin(kamWinkel) * abst, cz = F.z - Math.cos(kamWinkel) * abst;
+    kamHoehe += (F.y + hoehe - kamHoehe) * Math.min(1, dt * 6);
+    kamera.position.set(cx, Math.max(kamHoehe, bodenH(cx, cz) + .8), cz);
+    kamera.lookAt(F.x + fx * 3, F.y + 1.1, F.z + fz * 3);
+    if (heli) zfov = 50;
+  }
+  if (S.schuetteln > 0) {
+    const s = S.schuetteln * .35;
+    kamera.position.x += (Math.random() - .5) * s; kamera.position.y += (Math.random() - .5) * s;
+    S.schuetteln = Math.max(0, S.schuetteln - dt * 2.5);
+  }
+  kamFov += (zfov - kamFov) * Math.min(1, dt * (name === 'TV-KAMERAS' ? 8 : 3));
+  kamera.fov = kamFov; kamera.updateProjectionMatrix();
+  if (kamNameT > 0) { kamNameT -= dt; if (kamNameT <= 0) $('kamName').classList.remove('an'); }
+}
+
+// ================================================================
+//  Minikarte
+// ================================================================
+const karteC = $('karteC'), kctx = karteC.getContext('2d');
+let karteBild = null, kMin = [0, 0], kSkala = 1, kGroesse = 0;
+function karteVorbereiten() {
+  const r = karteC.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+  kGroesse = Math.round(r.width * dpr) || 160;
+  karteC.width = karteC.height = kGroesse;
+  let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+  for (let i = 0; i < N; i++) { x0 = Math.min(x0, px[i]); x1 = Math.max(x1, px[i]); z0 = Math.min(z0, pz[i]); z1 = Math.max(z1, pz[i]); }
+  const rand = kGroesse * .08; kSkala = (kGroesse - 2 * rand) / Math.max(x1 - x0, z1 - z0);
+  kMin = [x0 - ((kGroesse - 2 * rand) / kSkala - (x1 - x0)) / 2 - rand / kSkala, z0 - ((kGroesse - 2 * rand) / kSkala - (z1 - z0)) / 2 - rand / kSkala];
+  const c = document.createElement('canvas'); c.width = c.height = kGroesse; const g = c.getContext('2d');
+  g.lineJoin = g.lineCap = 'round';
+  const pfad = () => { g.beginPath(); for (let i = 0; i <= N; i += 2) { const j = W(i), [u, v] = kPunkt(px[j], pz[j]); i ? g.lineTo(u, v) : g.moveTo(u, v); } g.closePath(); };
+  pfad(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = kGroesse * .05; g.stroke();
+  pfad(); g.strokeStyle = 'rgba(240,244,236,.85)'; g.lineWidth = kGroesse * .022; g.stroke();
+  const [u, v] = kPunkt(px[0], pz[0]); g.fillStyle = '#b8ff3c'; g.fillRect(u - kGroesse * .03, v - 2, kGroesse * .06, 4);
+  karteBild = c;
+}
+function kPunkt(x, z) { return [(x - kMin[0]) * kSkala, (z - kMin[1]) * kSkala]; }
+function karteAuto(A, farbe, hohl) {
+  const [u, v] = kPunkt(A.x, A.z), s = kGroesse * .045;
+  kctx.save(); kctx.translate(u, v); kctx.rotate(-A.h + Math.PI);
+  kctx.beginPath(); kctx.moveTo(0, -s * 1.3); kctx.lineTo(s * .8, s); kctx.lineTo(-s * .8, s); kctx.closePath();
+  kctx.lineWidth = 2;
+  if (hohl) { kctx.strokeStyle = farbe; kctx.fillStyle = 'rgba(11,18,6,.6)'; kctx.fill(); kctx.stroke(); }
+  else { kctx.fillStyle = farbe; kctx.strokeStyle = '#0b1206'; kctx.fill(); kctx.stroke(); }
+  kctx.restore();
+}
+function karteZeichnen() {
+  if (!karteBild) return;
+  kctx.clearRect(0, 0, kGroesse, kGroesse); kctx.drawImage(karteBild, 0, 0);
+  if (G.sichtbar) karteAuto(G, '#b8ff3c', S.modus === 'rennen');
+  if (GI.sichtbar) karteAuto(GI, '#3cd8ff', true);
+  if (S.modus !== 'zuschauen') karteAuto(spieler, '#ffffff', false);
+}
+
+// ================================================================
+//  HUD
+// ================================================================
+let abschnittTimer = 0;
+function meldung(text, unter, klasse) {
+  const m = $('meldung');
+  m.className = ''; void m.offsetWidth;
+  m.innerHTML = ''; m.append(text); if (unter) { const s = document.createElement('small'); s.textContent = unter; m.append(s); }
+  m.className = 'pop ' + (klasse || '');
+}
+function hudUpdate(F, dt) {
+  const zusch = S.modus === 'zuschauen';
+  $('kmh').textContent = Math.round(Math.abs(F.vF) * 3.6);
+  $('gang').textContent = F.gang === 0 ? 'R' : F.gang;
+  $('drehzahl').firstChild.style.width = clamp((F.rpm - 900) / 7400, 0, 1) * 100 + '%';
+  if (zusch) {
+    $('rundeNr').textContent = G.runde || '–';
+    $('zeitGross').textContent = zeitText(G.rundeZeit) === '–' ? '0:00.0' : zeitText(G.rundeZeit);
+    $('letzte').textContent = G.runde > 1 ? zeitText(VORLAGE.st.runden[G.runde - 2]) : '–';
+    $('beste').textContent = zeitText(VORLAGE.beste);
+  } else {
+    $('rundeNr').textContent = spieler.rundeAktiv ? spieler.runde : '–';
+    $('zeitGross').textContent = spieler.rundeAktiv ? zeitText(spieler.zeit - spieler.rundeStart) : '0:00.0';
+    $('letzte').textContent = zeitText(spieler.letzte);
+    $('beste').textContent = zeitText(spieler.beste);
+  }
+  $('gesamtWert').textContent = zahl(F.punkte);
+  $('maxV').textContent = Math.round((zusch ? G.vmax : spieler.vmax) * 3.6) + ' km/h';
+  if (S.runden > 0) { const r = zusch ? G.runde : (spieler.rundeAktiv ? spieler.runde : 0); $('rundeNr').textContent = (r ? Math.min(r, S.runden) : '–') + '/' + S.runden; }
+  const dr = $('drift');
+  if (F.driftPunkte > 0) {
+    dr.classList.add('an');
+    $('driftWert').textContent = zahl(F.driftPunkte);
+    $('driftMult').textContent = '×' + F.mult;
+    $('driftWinkel').textContent = Math.round(Math.abs(F.beta) * 57.3) + '°';
+    $('driftBalken').firstChild.style.width = (F.mult >= 5 ? 100 : zusch ? 50 : (F.driftZeit % 2.5) / 2.5 * 100) + '%';
+  } else dr.classList.remove('an');
+  $('falsch').hidden = zusch || spieler.falsch < 1;
+  if (S.modus === 'selbst' && MEIN_GEIST) {
+    const el = $('abstandWert'); $('abstand').hidden = false;
+    if (spieler.rundeAktiv) {
+      const rel = W(spieler.idx), tg = MEIN_GEIST.zeitBei[rel], d = (spieler.zeit - spieler.rundeStart) - tg;
+      if (rel < N - 60) { el.textContent = (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + ' s'; el.className = d <= 0 ? 'vorn' : 'hinten'; }
+    } else { el.textContent = '–'; el.className = ''; }
+  }
+  if (S.modus === 'rennen' && VORLAGE) {
+    const p = spieler.fortschritt, tg = p > 0 ? VORLAGE.zeitBei[Math.min(p, VORLAGE.zeitBei.length - 1)] : undefined;
+    const el = $('abstandWert');
+    if (tg !== undefined && p < VORLAGE.zeitBei.length) {
+      const d = spieler.zeit - tg;
+      el.textContent = (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + ' s';
+      el.className = d <= 0 ? 'vorn' : 'hinten';
+    } else { el.textContent = '–'; el.className = ''; }
+  }
+  const name = abschnittBei(F.idx);
+  if (name !== S.abschnitt) { S.abschnitt = name; $('abschnitt').textContent = name; $('abschnitt').classList.add('an'); abschnittTimer = 2.6; }
+  if (abschnittTimer > 0) { abschnittTimer -= dt; if (abschnittTimer <= 0) $('abschnitt').classList.remove('an'); }
+  karteZeichnen();
+}
+
+// ================================================================
+//  Auto-Darstellung
+// ================================================================
+function autoDarstellen(a, A, dt) {
+  a.gr.position.set(A.x, A.y, A.z);
+  a.gr.rotation.y = A.h; a.gr.rotation.x = -A.pitch; a.gr.rotation.z = A.roll;
+  const rollZiel = clamp(-A.r * A.v * .0035, -.07, .07), pitchZiel = A.bremst ? .025 : (A.last && A.v < 30 ? -.02 : 0);
+  a.rollVis += (rollZiel - a.rollVis) * Math.min(1, dt * 6);
+  a.pitchVis += (pitchZiel - a.pitchVis) * Math.min(1, dt * 6);
+  a.karosse.rotation.z = a.rollVis; a.karosse.rotation.x = a.pitchVis;
+  const quer = Math.abs(A.beta) > .2, gegen = quer ? clamp(-A.beta * .7, -.5, .5) : 0;
+  for (const r of a.raeder) {
+    r.dreh.rotation.x = A.raddreh;
+    if (r.vorn) r.lenk.rotation.y = -(A.lenkWinkel * 1.2) * (quer ? .3 : 1) + gegen;
+  }
+  a.mats.rueck.emissiveIntensity = A.bremst ? 3 : .7;
+}
+function autosSichtbar() {
+  for (const a of [autos.spieler.f1, autos.geist.f1, autos.ich.f1]) a.gr.visible = false;
+}
+
+// ================================================================
+//  Steuerung
+// ================================================================
+addEventListener('keydown', e => {
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'F3'].includes(e.code)) e.preventDefault();
+  tasten[e.code] = true;
+  if (e.repeat) return;
+  if (e.code === 'KeyP' || e.code === 'Escape') pauseUmschalten();
+  if (e.code === 'KeyR') zuruecksetzen();
+  if (e.code === 'KeyC' || e.code === 'F3') kameraWechseln();
+  if (e.code === 'KeyM') tonSetzen(!tonAn);
+  if (e.code === 'Enter' && (S.zustand === 'menue' || S.zustand === 'ziel') && VORLAGE) starten();
+});
+addEventListener('keyup', e => { tasten[e.code] = false; });
+addEventListener('blur', () => { for (const k in tasten) tasten[k] = false; for (const k in touch) touch[k] = false; });
+document.querySelectorAll('.tk').forEach(el => {
+  const t = el.dataset.t;
+  const an = e => { e.preventDefault(); el.classList.add('an'); if (t === 'reset') zuruecksetzen(); else touch[t] = true; try { el.setPointerCapture(e.pointerId); } catch (_) {} };
+  const aus = () => { el.classList.remove('an'); if (t !== 'reset') touch[t] = false; };
+  el.addEventListener('pointerdown', an);
+  el.addEventListener('pointerup', aus); el.addEventListener('pointercancel', aus); el.addEventListener('lostpointercapture', aus);
+  el.addEventListener('contextmenu', e => e.preventDefault());
+});
+const istTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+if (istTouch) { document.body.classList.add('touch'); $('steuerTasten').hidden = true; $('steuerTouch').hidden = false; }
+document.addEventListener('touchmove', e => { if (S.zustand === 'fahren') e.preventDefault(); }, { passive: false });
+
+function wahlAnzeigen() {
+  document.querySelectorAll('#rundenWahl .wahlKnopf').forEach(b => b.classList.toggle('an', Number(b.dataset.r) === S.runden));
+  document.querySelectorAll('#modusWahl .wahlKnopf').forEach(b => b.classList.toggle('an', b.dataset.m === S.modus));
+  autosSichtbar(); autos.spieler[S.modell].gr.visible = true;
+}
+document.querySelectorAll('#rundenWahl .wahlKnopf').forEach(b => b.onclick = () => { S.runden = Number(b.dataset.r); rekord.runden = S.runden; speichern(); wahlAnzeigen(); });
+document.querySelectorAll('#modusWahl .wahlKnopf').forEach(b => b.onclick = () => { S.modus = b.dataset.m; rekord.modus = S.modus; speichern(); wahlAnzeigen(); });
+FARBEN.forEach((f, i) => {
+  const b = document.createElement('button'); b.className = 'farbe' + (i === (rekord.farbe || 0) ? ' an' : ''); b.style.background = f; b.setAttribute('aria-label', 'Farbe ' + (i + 1));
+  b.onclick = () => { document.querySelectorAll('.farbe').forEach(x => x.classList.remove('an')); b.classList.add('an'); lackSpieler.color.set(f); rekord.farbe = i; speichern(); };
+  $('farben').append(b);
+});
+function menueRekorde() {
+  $('rRunde').textContent = zeitText(rekord.runde);
+  $('rDrift').textContent = rekord.drift ? zahl(rekord.drift) : '–';
+  $('rKi').textContent = VORLAGE ? zeitText(VORLAGE.beste) : '…';
+}
+function starten() {
+  if (!VORLAGE) return;
+  const brauche = Math.max(2, S.runden || 0);
+  if ((S.modus === 'rennen' || S.modus === 'zuschauen') && VORLAGE.runden < brauche) VORLAGE = vorlageAufnehmen(KI_STANDARD, brauche);
+  $('zielMenue').hidden = true; G.vmax = 0; GI.sichtbar = false; aufnahme = null;
+  audioStart();
+  aufStartSetzen(spieler);
+  spurenLeeren(); rauch.leeren(); funken.leeren();
+  spurenSpieler[0] = spurenSpieler[1] = spurenGeist[0] = spurenGeist[1] = null;
+  S.zustand = 'fahren'; S.ampelAktiv = true; S.ampel = 0; S.ampelAus = 5.2 + Math.random() * 2.6; S.geistZeit = 0; S.kamera = 0; S.abschnitt = ''; tvKam = -1; G.letztePunkte = 0;
+  const zusch = S.modus === 'zuschauen';
+  autosSichtbar();
+  if (!zusch) autos.spieler[S.modell].gr.visible = true;
+  $('startMenue').hidden = true; $('pauseMenue').hidden = true; $('hud').hidden = false;
+  $('touch').hidden = !istTouch || zusch;
+  $('abstand').hidden = !(S.modus === 'rennen' || (S.modus === 'selbst' && MEIN_GEIST));
+  $('abstand').firstChild.textContent = S.modus === 'selbst' ? 'DEIN GEIST' : 'VORLAGE';
+  $('zuschauerInfo').hidden = !zusch;
+  $('kamKnopf').hidden = false;
+  $('hilfe').hidden = zusch;
+  $('rundeTitel').textContent = zusch ? 'Vorlage' : 'Runde';
+  geistSetzen(0);
+  kamWinkel = zusch ? G.h : spieler.h; kamHoehe = spieler.y + 2.5;
+  requestAnimationFrame(karteVorbereiten);
+  ampelZeigen(0); $('ampel').hidden = false;
+}
+function ampelZeigen(n) {
+  AMPEL_LAMPEN.forEach((m, k) => m.color.set(k < n ? '#ff2a14' : '#2a0806'));
+  document.querySelectorAll('#ampel .spalte').forEach((el, k) => el.classList.toggle('an', k < n));
+}
+function piep(f, d) {
+  if (!ac || !tonAn) return;
+  const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = f;
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.16, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + d + .05);
+}
+function ampelSchritt(dt) {
+  const vorher = Math.min(5, Math.floor(S.ampel));
+  S.ampel += dt;
+  if (S.ampel >= S.ampelAus) {
+    S.ampelAktiv = false; ampelZeigen(0); piep(1320, .35);
+    setTimeout(() => { $('ampel').hidden = true; }, 700);
+    const zusch = S.modus === 'zuschauen';
+    if (zusch) meldung('LICHTER AUS!', 'Vorlage · Bestzeit ' + zeitText(VORLAGE.beste) + ' · C / F3 = Kamera', 'gut');
+    else if (S.modus === 'rennen') meldung('LICHTER AUS!', 'Der grüne Geist zeigt die Ideallinie', 'gut');
+    else if (S.modus === 'selbst') meldung('LICHTER AUS!', MEIN_GEIST ? 'Dein Geist (' + zeitText(MEIN_GEIST.zeit) + ') startet an der Linie' : 'Noch kein Geist – fahr eine Runde, dann fährt dein Ich mit', 'gut');
+    else meldung('LICHTER AUS!', 'Zeit läuft ab Start/Ziel', 'gut');
+    return;
+  }
+  const n = Math.min(5, Math.floor(S.ampel));
+  if (n !== vorher) { ampelZeigen(n); if (n > 0) piep(660, .18); }
+}
+function ziel() {
+  S.zustand = 'ziel';
+  const zusch = S.modus === 'zuschauen';
+  const F = zusch ? G : spieler;
+  const gesamt = zusch ? VORLAGE.zeitBei[Math.min(VORLAGE.zeitBei.length - 1, Math.round(S.runden * N + 22))] : spieler.zeit;
+  $('zielUnter').textContent = zusch ? 'VORLAGE · ' + S.runden + (S.runden > 1 ? ' RUNDEN' : ' RUNDE') : S.runden + (S.runden > 1 ? ' RUNDEN' : ' RUNDE') + ' GESCHAFFT';
+  $('zZeit').textContent = zeitText(gesamt);
+  $('zRunde').textContent = zeitText(zusch ? VORLAGE.beste : spieler.beste);
+  $('zMax').textContent = Math.round((zusch ? G.vmax : spieler.vmax) * 3.6) + ' km/h';
+  $('zPunkte').textContent = zahl(F.punkte);
+  let v = '';
+  if (S.modus === 'rennen') {
+    const tg = VORLAGE.zeitBei[Math.min(VORLAGE.zeitBei.length - 1, spieler.fortschritt)];
+    if (tg !== undefined) { const d = spieler.zeit - tg; v = d <= 0 ? 'Du warst ' + Math.abs(d).toFixed(1) + ' s schneller als die Vorlage!' : 'Die Vorlage war ' + d.toFixed(1) + ' s schneller.'; }
+  }
+  if (S.modus === 'selbst' && MEIN_GEIST) v = 'Dein Geist fährt ab jetzt deine beste Runde: ' + zeitText(MEIN_GEIST.zeit);
+  $('zVergleich').textContent = v; $('zVergleich').hidden = !v;
+  $('zielMenue').hidden = false; $('touch').hidden = true;
+  meldung('ZIEL!', '', 'gut'); pling();
+}
+function pauseUmschalten() {
+  if (S.zustand === 'fahren') {
+    S.zustand = 'pause';
+    const F = S.modus === 'zuschauen' ? G : spieler;
+    $('pPunkte').textContent = zahl(F.punkte);
+    $('pRunde').textContent = zeitText(S.modus === 'zuschauen' ? VORLAGE.beste : spieler.beste);
+    $('pDrift').textContent = S.modus === 'zuschauen' ? zahl(VORLAGE.besterDrift) : (spieler.besterDrift ? zahl(spieler.besterDrift) : '–');
+    $('pauseMenue').hidden = false; $('touch').hidden = true;
+  } else if (S.zustand === 'pause') {
+    S.zustand = 'fahren'; $('pauseMenue').hidden = true; $('touch').hidden = !istTouch || S.modus === 'zuschauen'; audioStart();
+  }
+}
+function zumMenue() {
+  S.zustand = 'menue'; $('pauseMenue').hidden = true; $('hud').hidden = true; $('touch').hidden = true;
+  aufStartSetzen(spieler); G.sichtbar = false; S.ampelAktiv = false; $('ampel').hidden = true; ampelZeigen(0); menueRekorde(); wahlAnzeigen(); $('startMenue').hidden = false;
+}
+$('startKnopf').onclick = starten;
+$('nochmalKnopf').onclick = starten;
+$('zielMenueKnopf').onclick = () => { $('zielMenue').hidden = true; zumMenue(); };
+$('weiterKnopf').onclick = pauseUmschalten;
+$('neuKnopf').onclick = zumMenue;
+$('pauseKnopf').onclick = pauseUmschalten;
+$('kamKnopf').onclick = kameraWechseln;
+$('tonKnopf').onclick = () => tonSetzen(!tonAn);
+$('tonKnopf2').onclick = () => tonSetzen(!tonAn);
+tonSetzen(tonAn);
+document.addEventListener('visibilitychange', () => { if (document.hidden && S.zustand === 'fahren') pauseUmschalten(); });
+addEventListener('resize', () => {
+  renderer.setSize(innerWidth, innerHeight);
+  kamera.aspect = innerWidth / innerHeight; kamera.updateProjectionMatrix();
+  rauch.mat.uniforms.uSkala.value = funken.mat.uniforms.uSkala.value = innerHeight * .9 * renderer.getPixelRatio();
+  if (S.zustand !== 'menue') karteVorbereiten();
+});
+
+// ================================================================
+//  Hauptschleife
+// ================================================================
+let akku = 0, letzte = performance.now();
+function frame(t) {
+  requestAnimationFrame(frame);
+  const dtR = Math.min(.05, (t - letzte) / 1000); letzte = t;
+  const dt = dtR * ZEITFAKTOR;
+  const laufend = S.zustand === 'fahren';
+  const zusch = S.modus === 'zuschauen';
+  if (laufend && S.ampelAktiv) {
+    ampelSchritt(dt);
+    const e = eingabe();
+    spieler.rpm += ((e.gas ? 6200 : 900) - spieler.rpm) * Math.min(1, dtR * (e.gas ? 4 : 2));
+    spieler.last = e.gas ? 1 : 0;
+    if (S.modus === 'rennen' || S.modus === 'zuschauen') geistSetzen(0); else G.sichtbar = false;
+  } else if (laufend) {
+    if (zusch) {
+      S.geistZeit += dt;
+      if (S.runden > 0 && G.runde - 1 >= S.runden) ziel();
+      else if (!geistSetzen(S.geistZeit)) { if (S.runden > 0) { ziel(); } else { S.geistZeit = 0; G.vmax = 0; spurenGeist[0] = spurenGeist[1] = null; geistSetzen(0); } }
+      if (G.v > G.vmax) G.vmax = G.v;
+    } else {
+      akku += dt; let n = 0;
+      while (akku >= DT && n < 40) { physik(spieler, eingabe(), DT, EV); akku -= DT; n++; }
+      if (n >= 40) akku = 0;
+      if (S.modus === 'rennen') geistSetzen(spieler.zeit); else G.sichtbar = false;
+      aufnahmeSchritt();
+      if (S.modus === 'selbst' && MEIN_GEIST && spieler.rundeAktiv) geistSetzen(spieler.zeit - spieler.rundeStart, MEIN_GEIST, GI); else GI.sichtbar = false;
+      if (S.runden > 0 && spieler.rundeAktiv && spieler.runde - 1 >= S.runden) ziel();
+    }
+    // Drift-Meldungen der Vorlage im Zuschauer-Modus
+    if (zusch) {
+      if (G.punkte > G.letztePunkte) { const p = G.punkte - G.letztePunkte; if (p >= 150) { meldung('+' + zahl(p), p > 2500 ? 'STARKER DRIFT' : 'DRIFT', 'gut'); } }
+      G.letztePunkte = G.punkte;
+    }
+  }
+  if (S.zustand !== 'pause') {
+    rauch.update(dt); funken.update(dt);
+    if (laufend) {
+      if (!zusch) { const e = eingabe(); effekte(spieler, spurenSpieler, dt, e.gas, e.hand, 1); }
+      if (G.sichtbar) effekte(G, spurenGeist, dt, G.last > .5, false, zusch ? 1 : .45);
+      if (GI.sichtbar) effekte(GI, spurenIch, dt, GI.last > .5, false, .45);
+    }
+  }
+  const geistAuto = zusch ? autos.spieler[S.modell] : autos.geist[S.modell];
+  if (laufend || S.zustand === 'pause' || S.zustand === 'ziel') {
+    autos.geist.f1.gr.visible = false;
+    if (G.sichtbar) { geistAuto.gr.visible = true; autoDarstellen(geistAuto, G, dtR); }
+    else if (zusch) geistAuto.gr.visible = false;
+  }
+  if (!zusch || S.zustand === 'menue') autoDarstellen(autos.spieler[S.modell], spieler, dtR);
+  autos.ich.f1.gr.visible = GI.sichtbar && S.zustand !== 'menue';
+  if (autos.ich.f1.gr.visible) autoDarstellen(autos.ich.f1, GI, dtR);
+  const F = zusch && (laufend || S.zustand === 'pause' || S.zustand === 'ziel') ? G : spieler;
+  kameraUpdate(F, dtR);
+  sonne.position.set(F.x + SONNE.x * 200, F.y + SONNE.y * 200, F.z + SONNE.z * 200);
+  sonne.target.position.set(F.x, F.y, F.z);
+  himmel.position.copy(kamera.position);
+  if (laufend) hudUpdate(F, dtR);
+  audioUpdate(F.rpm, F.last, F.quietsch, laufend);
+  spurHochladen();
+  renderer.render(szene, kamera);
+}
+
+aufStartSetzen(spieler);
+S.zustand = 'menue';
+wahlAnzeigen();
+menueRekorde();
+$('laden').hidden = true;
+$('startMenue').hidden = false;
+requestAnimationFrame(frame);
+// Vorlage (Computerfahrt) im Hintergrund berechnen
+setTimeout(() => {
+  VORLAGE = vorlageAufnehmen(KI_STANDARD, 2);
+  $('startKnopf').disabled = false; $('startKnopf').textContent = "LOS GEHT'S";
+  menueRekorde();
+}, 60);
+
+window.__drift = { spieler, S, G, touch, N, LAENGE, get VORLAGE() { return VORLAGE; } };
+})();
+</script>
+</body>
+</html>
